@@ -1,0 +1,73 @@
+COMMENT TRANSFORMER CE LOGICIEL EN .EXE WINDOWS
+=================================================
+
+Ce dossier contient un vrai logiciel de bureau (fenêtre native, pas une
+page web). Pour l'utiliser tout de suite, tu n'as même pas besoin du
+.exe : voir "UTILISATION IMMÉDIATE" ci-dessous.
+
+Pour obtenir un fichier .exe autonome (double-clic, sans avoir Python
+installé), suis ces 4 étapes SUR UN ORDINATEUR WINDOWS :
+
+
+ÉTAPE 1 — Installer Python (si pas déjà fait)
+-----------------------------------------------
+Télécharge et installe Python depuis https://python.org
+Pendant l'installation, coche la case "Add Python to PATH".
+
+
+ÉTAPE 2 — Ouvrir une invite de commande dans ce dossier
+----------------------------------------------------------
+Dans l'explorateur de fichiers, ouvre le dossier où se trouvent
+app.py, ngambay_verses.json et french_verses.json.
+Clique dans la barre d'adresse, tape "cmd" et appuie sur Entrée.
+
+
+ÉTAPE 3 — Installer PyInstaller
+----------------------------------
+Dans la fenêtre noire qui s'est ouverte, tape :
+
+    pip install pyinstaller
+
+Attends que ça se termine (quelques secondes à 1-2 minutes).
+
+
+ÉTAPE 4 — Générer le .exe
+-----------------------------
+Toujours dans la même fenêtre, tape :
+
+    pyinstaller --onefile --windowed --name LexicographeNgambay --add-data "ngambay_verses.json;." --add-data "french_verses.json;." app.py
+
+Attends la fin (1 à 3 minutes). Un dossier "dist" apparaît, et dedans :
+
+    LexicographeNgambay.exe
+
+C'est ton logiciel autonome. Tu peux le copier n'importe où sur ton
+PC, le mettre sur le bureau, en faire un raccourci — il n'a plus
+besoin de Python installé pour fonctionner.
+
+IMPORTANT : la première fois que tu lances le .exe, Windows peut
+afficher un avertissement "Windows a protégé votre ordinateur" parce
+que le fichier n'est pas signé numériquement (ça coûte cher et n'est
+pas nécessaire pour un usage personnel). Clique sur "Informations
+complémentaires" puis "Exécuter quand même".
+
+
+UTILISATION IMMÉDIATE (sans passer par le .exe)
+===================================================
+Si tu as Python installé, tu peux lancer le logiciel directement,
+sans passer par les 4 étapes ci-dessus :
+
+    1. Ouvre une invite de commande dans ce dossier
+    2. Tape : python app.py
+
+La fenêtre du logiciel s'ouvre immédiatement. C'est exactement le
+même logiciel — juste sans l'étape de compilation en .exe.
+
+
+DONNÉES ET SAUVEGARDE
+========================
+Toutes tes validations et les phrases que tu ajoutes sont sauvegardées
+automatiquement dans un fichier "lexique_ngambay.db" créé à côté du
+logiciel. C'est une vraie base de données locale sur ton disque —
+rien n'est envoyé sur internet. Fais une copie de ce fichier de temps
+en temps pour éviter de perdre ton travail (copier-coller suffit).

@@ -1,0 +1,18 @@
+﻿# Base de données locale (contient tes données personnelles, ne pas partager publiquement)
+lexique_ngambay.db
+
+# Fichiers Python générés automatiquement
+__pycache__/
+*.pyc
+
+# Dossiers générés par PyInstaller
+build/
+dist/
+*.spec
+
+# Environnement virtuel (si tu en crées un)
+venv/
+.venv/
+
+# Fichiers VSCode locaux
+.vscode/
