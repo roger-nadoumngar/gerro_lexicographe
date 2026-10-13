@@ -41,6 +41,10 @@ Attends la fin (1 à 3 minutes). Un dossier "dist" apparaît, et dedans :
 
     LexicographeNgambay.exe
 
+Les fichiers JSON sont inclus dans l'application et lus depuis le dossier
+interne du bundle PyInstaller (--onefile ou --onedir). Ne les deplace pas
+dans le dossier de donnees utilisateur.
+
 C'est ton logiciel autonome. Tu peux le copier n'importe où sur ton
 PC, le mettre sur le bureau, en faire un raccourci — il n'a plus
 besoin de Python installé pour fonctionner.
@@ -67,7 +71,14 @@ même logiciel — juste sans l'étape de compilation en .exe.
 DONNÉES ET SAUVEGARDE
 ========================
 Toutes tes validations et les phrases que tu ajoutes sont sauvegardées
-automatiquement dans un fichier "lexique_ngambay.db" créé à côté du
-logiciel. C'est une vraie base de données locale sur ton disque —
-rien n'est envoyé sur internet. Fais une copie de ce fichier de temps
-en temps pour éviter de perdre ton travail (copier-coller suffit).
+automatiquement dans le fichier "lexique_ngambay.db" du dossier de donnees utilisateur, meme si le logiciel est installe dans un dossier protege. Les chemins detailles et la migration de l ancienne base sont indiques ci-dessous. Sauvegarde regulierement ce fichier pour eviter de perdre ton travail.
+
+## Stockage persistant des données
+
+La base `lexique_ngambay.db` et les fichiers audio sont conservés dans un dossier utilisateur accessible, meme si l'application est installée dans un dossier protégé :
+
+- Windows : `%LOCALAPPDATA%\LexicographeNgambay\`
+- macOS : `~/Library/Application Support/LexicographeNgambay/`
+- Linux : `$XDG_DATA_HOME/LexicographeNgambay/` ou `~/.local/share/LexicographeNgambay/`
+
+Au premier lancement, si aucune base n'existe déjà dans ce dossier, une ancienne base située a cote du logiciel y est copiee. La base d'origine est conservee. Les fichiers JSON sont lus a cote du script en développement et depuis le bundle PyInstaller en modes `--onefile` et `--onedir`.
