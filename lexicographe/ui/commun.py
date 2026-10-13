@@ -17,10 +17,12 @@ DISCRET = "#6B6857"
 FEUILLE_DE_STYLE = f"""
 QWidget {{ color: {ENCRE}; }}
 QMainWindow, QDialog {{ background: {FOND}; }}
-QListWidget#navigation {{ background: {SARCELLE_FONCE}; color: #EAF2F1; border: none; padding-top: 8px; }}
-QListWidget#navigation::item {{ padding: 10px 14px; border-left: 3px solid transparent; }}
+QListWidget#navigation {{ background: {SARCELLE_FONCE}; color: #EAF2F1; border: none; padding-top: 8px;
+                           outline: 0; }}
+QListWidget#navigation::item {{ padding: 10px 14px; border-left: 3px solid transparent; color: #EAF2F1; }}
 QListWidget#navigation::item:selected {{ background: {SARCELLE}; color: white; border-left: 3px solid #E8C872; }}
-QListWidget#navigation::item:hover:!selected {{ background: #1C524E; }}
+QListWidget#navigation::item:hover {{ color: white; }}
+QListWidget#navigation::item:hover:!selected {{ background: #2A6A65; color: white; }}
 QLabel#titrePage {{ font-size: 20px; font-weight: 600; }}
 QLabel#sousTitre, QLabel.discret {{ color: {DISCRET}; }}
 QLabel#grandeForme {{ font-size: 28px; font-weight: 600; }}
