@@ -30,6 +30,9 @@ REGLAGES_PAR_DEFAUT = {
     # score minimal (coefficient de Dice) pour signaler une contradiction
     "seuil_contradiction": "0.5",
     "corpus_integre": "",
+    # ordre alphabétique de la langue documentée (graphèmes séparés par des espaces)
+    "alphabet_vern": "",
+    "police_vern": "",
 }
 
 

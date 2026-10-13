@@ -6,17 +6,23 @@ import json
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 
-from . import APP_NAME, lexique
+from . import APP_NAME, domaines, lexique
 
 
 def entrees_completes(projet):
-    """Toutes les entrées, avec sens, exemples et noms de catégories, triées par forme."""
+    """Toutes les entrées complètes, dans l'ordre alphabétique du projet, avec
+    noms de catégories, libellés de domaines, vedette et numéro d'homographe."""
     conn = projet.conn
     noms_cat = {cid: nom for cid, nom, _, _ in lexique.categories(conn)}
+    langue = projet.reglage("langue_analyse_code") or "fr"
+    libelles = {g: (c, n) for g, c, n, _ in domaines.arbre(conn, langue)}
     resultat = []
-    for (eid, *_rest) in lexique.lister_entrees(conn):
-        entree = lexique.lire_entree(conn, eid)
+    for ligne in lexique.lister_entrees(conn):
+        entree = lexique.lire_entree(conn, ligne.id)
+        entree.homographe = ligne.homographe
+        entree.vedette = lexique.vedette(entree.tete, ligne.homographe)
         entree.categories = [noms_cat.get(s.categorie_id, "") for s in entree.sens]
+        entree.libelles_domaines = [[libelles[g] for g in s.domaines if g in libelles] for s in entree.sens]
         resultat.append(entree)
     return resultat
 
@@ -30,23 +36,33 @@ def _relations_par_entree(conn):
 
 def exporter_json(projet, chemin):
     entrees = entrees_completes(projet)
-    formes = {e.id: e.forme for e in entrees}
+    par_id = {e.id: e for e in entrees}
     rels = _relations_par_entree(projet.conn)
     donnees = {
         "projet": projet.nom,
         "langue_vernaculaire": projet.reglage("langue_vern_code"),
         "langue_analyse": projet.reglage("langue_analyse_code"),
         "entrees": [{
-            "forme": e.forme,
             "guid": e.guid,
-            "sens": [{"glose": s.glose, "definition": s.definition, "categorie": cat,
-                      "domaine_semantique": s.domaine,
+            "forme": e.forme,
+            "forme_citation": e.forme_citation,
+            "homographe": e.homographe,
+            "prononciation": e.prononciation,
+            "type_morphologique": lexique.TYPES_MORPH.get(e.type_morph, e.type_morph),
+            "statut": e.statut,
+            "variantes": [{"forme": v.forme, "type": v.type, "environnement": v.environnement, "note": v.note}
+                          for v in e.variantes],
+            "forme_complexe": ({"type": e.type_forme_complexe,
+                                "composants": [par_id[c].vedette for c in e.composants if c in par_id]}
+                               if e.composants or e.type_forme_complexe else None),
+            "sens": [{"glose": s.glose, "index_inverse": lexique.formes_inverses(s), "definition": s.definition,
+                      "categorie": cat, "domaines": [f"{c} {n}" for c, n in libs],
                       "exemples": [{"vernaculaire": x.vernaculaire, "traduction": x.traduction,
                                     "reference": x.reference} for x in s.exemples]}
-                     for s, cat in zip(e.sens, e.categories)],
+                     for s, cat, libs in zip(e.sens, e.categories, e.libelles_domaines)],
             "notes": e.notes,
             "proprietes": e.proprietes,
-            "relations": [{"type": t, "forme": formes.get(c, "")} for c, t in rels.get(e.id, [])],
+            "relations": [{"type": t, "forme": par_id[c].vedette} for c, t in rels.get(e.id, []) if c in par_id],
             "date_modification": e.date_modification,
         } for e in entrees],
     }
@@ -60,32 +76,45 @@ def exporter_csv(projet, chemin):
     entrees = entrees_completes(projet)
     with open(chemin, "w", encoding="utf-8-sig", newline="") as f:  # BOM : accents corrects dans Excel
         w = csv.writer(f)
-        w.writerow(["forme", "sens", "glose", "categorie", "definition", "domaine_semantique",
-                    "exemple", "traduction_exemple", "notes"])
+        w.writerow(["vedette", "forme", "prononciation", "statut", "sens", "glose", "categorie", "definition",
+                    "domaines", "exemple", "traduction_exemple", "variantes", "notes"])
         for e in entrees:
-            for n, (s, cat) in enumerate(zip(e.sens, e.categories), start=1):
+            variantes = " ; ".join(f"{v.forme} ({v.type})" for v in e.variantes)
+            for n, (s, cat, libs) in enumerate(zip(e.sens, e.categories, e.libelles_domaines), start=1):
                 ex = s.exemples[0] if s.exemples else lexique.Exemple()
-                w.writerow([e.forme, n, s.glose, cat, s.definition, s.domaine,
-                            ex.vernaculaire, ex.traduction, e.notes if n == 1 else ""])
+                premier = n == 1
+                w.writerow([e.vedette, e.forme, e.prononciation if premier else "", e.statut if premier else "",
+                            n, s.glose, cat, s.definition, " ; ".join(f"{c} {nm}" for c, nm in libs),
+                            ex.vernaculaire, ex.traduction, variantes if premier else "",
+                            e.notes if premier else ""])
     return len(entrees)
 
 
 def exporter_texte(projet, chemin):
     entrees = entrees_completes(projet)
+    par_id = {e.id: e for e in entrees}
     titre = f"DICTIONNAIRE {projet.reglage('langue_vern_nom').upper()} — {projet.reglage('langue_analyse_nom').upper()}"
     with open(chemin, "w", encoding="utf-8") as f:
         f.write(titre + "\n" + "=" * len(titre) + "\n\n")
         for e in entrees:
-            f.write(e.forme + "\n")
+            tete = e.vedette + (f" [{e.prononciation}]" if e.prononciation else "")
+            if e.type_morph and e.type_morph != "stem":
+                tete += f" ({lexique.TYPES_MORPH.get(e.type_morph, e.type_morph)})"
+            f.write(tete + "\n")
+            if e.composants:
+                composants = " + ".join(par_id[c].vedette for c in e.composants if c in par_id)
+                f.write(f"  {e.type_forme_complexe or 'forme complexe'} : {composants}\n")
             plusieurs = len(e.sens) > 1
             for n, (s, cat) in enumerate(zip(e.sens, e.categories), start=1):
-                tete = f"  {n}. " if plusieurs else "  "
+                prefixe = f"  {n}. " if plusieurs else "  "
                 details = ", ".join(x for x in (cat, s.domaine) if x)
-                f.write(f"{tete}{f'({details}) ' if details else ''}{s.glose}\n")
+                f.write(f"{prefixe}{f'({details}) ' if details else ''}{s.glose}\n")
                 if s.definition:
                     f.write(f"      {s.definition}\n")
                 for x in s.exemples:
                     f.write(f"      « {x.vernaculaire} »" + (f" — {x.traduction}" if x.traduction else "") + "\n")
+            if e.variantes:
+                f.write("  Variantes : " + " ; ".join(f"{v.forme} ({v.type})" for v in e.variantes) + "\n")
             if e.notes:
                 f.write(f"  Notes : {e.notes}\n")
             f.write("\n")
@@ -119,13 +148,44 @@ def construire_lift(projet):
     racine = ET.Element("lift", version="0.13", producer=APP_NAME)
     for e in entrees:
         attrs = {"id": lift_id(e), "guid": e.guid}
+        if e.homographe:
+            attrs["order"] = str(e.homographe)
         if e.date_creation:
             attrs["dateCreated"] = _date_lift(e.date_creation)
         if e.date_modification:
             attrs["dateModified"] = _date_lift(e.date_modification)
         el = ET.SubElement(racine, "entry", attrs)
         _forme(el, "lexical-unit", lang_v, e.forme)
-        for n, (s, cat) in enumerate(zip(e.sens, e.categories), start=1):
+        if e.forme_citation:
+            _forme(el, "citation", lang_v, e.forme_citation)
+        if e.prononciation:
+            # convention FLEx : la prononciation (API) est écrite dans le système d'écriture « langue-fonipa »
+            _forme(el, "pronunciation", f"{lang_v}-fonipa", e.prononciation)
+        for v in e.variantes:
+            var = _forme(ET.SubElement(el, "variant"), None, lang_v, v.forme)
+            ET.SubElement(var, "trait", name="type", value=v.type)
+            if v.environnement:
+                ET.SubElement(var, "trait", name="environnement", value=v.environnement)
+            if v.note:
+                _forme(var, "note", lang_a, v.note)
+        if e.type_morph:
+            ET.SubElement(el, "trait", name="morph-type", value=e.type_morph)
+        ET.SubElement(el, "trait", name="statut", value=e.statut)
+        for nom, valeur in e.proprietes.items():
+            ET.SubElement(el, "trait", name=nom, value=valeur)
+        if e.notes:
+            _forme(el, "note", lang_a, e.notes)
+        # formes complexes : relation « _component-lexeme » vers chaque composant (convention FLEx)
+        for i, cid in enumerate(e.composants, start=1):
+            if cid in par_id:
+                rel = ET.SubElement(el, "relation", type="_component-lexeme", ref=lift_id(par_id[cid]), order=str(i))
+                if e.type_forme_complexe:
+                    ET.SubElement(rel, "trait", name="complex-form-type", value=e.type_forme_complexe)
+        for cible, typ in rels.get(e.id, []):
+            if cible in par_id:
+                ET.SubElement(el, "relation", type=typ, ref=lift_id(par_id[cible]))
+
+        for n, (s, cat, libs) in enumerate(zip(e.sens, e.categories, e.libelles_domaines), start=1):
             sens = ET.SubElement(el, "sense", id=f"{lift_id(e)}_s{n}", order=str(n))
             if cat:
                 ET.SubElement(sens, "grammatical-info", value=cat)
@@ -140,15 +200,12 @@ def construire_lift(projet):
                     _forme(ex, None, lang_v, x.vernaculaire)
                 if x.traduction:
                     _forme(ex, "translation", lang_a, x.traduction)
+            for code, nom in libs:
+                ET.SubElement(sens, "trait", name="semantic-domain-ddp4", value=f"{code} {nom}")
             if s.domaine:
-                ET.SubElement(sens, "trait", name="domaine-semantique", value=s.domaine)
-        for nom, valeur in e.proprietes.items():
-            ET.SubElement(el, "trait", name=nom, value=valeur)
-        if e.notes:
-            _forme(el, "note", lang_a, e.notes)
-        for cible, typ in rels.get(e.id, []):
-            if cible in par_id:
-                ET.SubElement(el, "relation", type=typ, ref=lift_id(par_id[cible]))
+                ET.SubElement(sens, "trait", name="domaine-libre", value=s.domaine)
+            for mot in lexique.formes_inverses(s):
+                _forme(ET.SubElement(sens, "reversal", type=lang_a), None, lang_a, mot)
     ET.indent(racine)
     return ET.ElementTree(racine), len(entrees)
 

@@ -47,14 +47,22 @@ sans modifier l'original.
 | Page | Rôle |
 |---|---|
 | Tableau de bord | Chiffres du projet, contradictions détectées (garder ou adopter) |
-| Lexique | Entrées à plusieurs sens : glose, catégorie, domaine, définition, exemples, notes, propriétés, relations |
+| Lexique | Entrées complètes (forme de citation, prononciation, type morphologique, statut, variantes et allomorphes, formes complexes, sens, médias, relations) ; filtres, modification en masse, import LIFT |
+| Domaines | Domaines sémantiques officiels de SIL, questions d'élicitation, mots classés |
+| Index inverse | Partie langue d'analyse → langue documentée du dictionnaire |
 | Validation | Propositions du moteur, avec les phrases qui les justifient |
 | Corpus | Phrases parallèles ; import USFM / SFM, lecture Word / PDF, enregistrements audio |
 | Exports | LIFT (FLEx, WeSay, Dictionary App Builder), JSON, CSV, texte |
 
 **Réglages du projet** (menu Fichier) : langues et codes ISO, règles de
 découpage en mots, mots vides de la langue d'analyse, seuil des
-contradictions, catégories grammaticales.
+contradictions, alphabet (ordre de tri) et police de la langue, catégories
+grammaticales hiérarchiques.
+
+**Domaines sémantiques** : la liste officielle de SIL est copiée dans le
+projet depuis l'installation de FLEx (fichiers `LocalizedLists-fr.zip` ou
+`SemDom.xml`), ou depuis un de ces fichiers choisi dans la page Domaines.
+Elle n'est pas distribuée avec le logiciel.
 
 ## Données
 
@@ -83,7 +91,9 @@ lexicographe/
   texte.py                  normalisation Unicode, découpage en mots à règles
   base.py                   schéma SQLite versionné, migrations, conversion v0.1
   projet.py                 projets (.lexique), réglages, sauvegardes
-  lexique.py                entrées, sens, exemples, relations, catégories
+  lexique.py                entrées, sens, variantes, composants, relations, catégories, index inverse
+  domaines.py               domaines sémantiques (lecture des listes FLEx)
+  lift_import.py            import LIFT (FLEx, WeSay)
   alignement.py             propositions de traduction, preuves, contradictions
   usfm.py                   lecture USFM / SFM, ordre canonique des livres
   corpus.py                 corpus d'exemple intégré

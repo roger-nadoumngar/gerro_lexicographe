@@ -9,7 +9,7 @@ from datetime import datetime
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from .. import APP_ID, APP_NAME, alignement, base, corpus
+from .. import APP_ID, APP_NAME, alignement, base, corpus, domaines
 from ..chemins import anciennes_bases, dossier_sauvegardes
 from ..projet import Projet, chemin_nouveau_projet, lister_projets
 from .commun import CurseurAttente, appliquer_style, erreur
@@ -34,6 +34,8 @@ def ouvrir_projet(chemin):
     projet = Projet(chemin)
     with CurseurAttente():
         corpus.synchroniser(projet)
+        # liste officielle des domaines sémantiques, copiée depuis FLEx si elle est installée
+        domaines.charger_depuis_flex(projet.conn, projet.reglage("langue_analyse_code") or "fr")
         alignement.recalculer(projet)
     return projet
 

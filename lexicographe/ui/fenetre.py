@@ -11,7 +11,8 @@ from ..chemins import dossier_sauvegardes
 from ..projet import EXTENSION
 from .commun import CurseurAttente, erreur, info
 from .dialogues import DialogueReglages
-from .pages import PageCorpus, PageExports, PageLexique, PageTableauDeBord, PageValidation
+from .pages import (PageCorpus, PageDomaines, PageExports, PageIndexInverse, PageLexique, PageTableauDeBord,
+                    PageValidation)
 
 
 class FenetrePrincipale(QMainWindow):
@@ -39,6 +40,8 @@ class FenetrePrincipale(QMainWindow):
         self.pages = [
             ("Tableau de bord", PageTableauDeBord(projet)),
             ("Lexique", PageLexique(projet)),
+            ("Domaines", PageDomaines(projet)),
+            ("Index inverse", PageIndexInverse(projet)),
             ("Validation", PageValidation(projet)),
             ("Corpus", PageCorpus(projet)),
             ("Exports", PageExports(projet)),
@@ -47,6 +50,9 @@ class FenetrePrincipale(QMainWindow):
             self.navigation.addItem(nom)
             self.pile.addWidget(page)
             page.donnees_modifiees.connect(self.rafraichir_tout)
+        for _, page in self.pages:
+            if hasattr(page, "ouvrir_entree") and not isinstance(page, PageLexique):
+                page.ouvrir_entree.connect(self.ouvrir_entree)
         self.navigation.currentRowChanged.connect(self._changer_page)
         self._page_courante = 0
         self.navigation.setCurrentRow(0)
@@ -99,9 +105,16 @@ class FenetrePrincipale(QMainWindow):
         self.pile.setCurrentIndex(index)
         self.pages[index][1].rafraichir()
 
+    def ouvrir_entree(self, entree_id):
+        """Affiche une entrée dans la page Lexique."""
+        lexique_page = dict(self.pages)["Lexique"]
+        self.navigation.setCurrentRow([nom for nom, _ in self.pages].index("Lexique"))
+        if self.pile.currentWidget() is lexique_page:
+            lexique_page.ouvrir_entree(entree_id)
+
     def rafraichir_tout(self):
-        for _, page in self.pages:
-            page.rafraichir()
+        # seule la page visible est recalculée ; les autres le sont quand on les affiche (_changer_page)
+        self.pile.currentWidget().rafraichir()
 
     def _reglages(self):
         d = DialogueReglages(self.projet, self)
@@ -109,6 +122,9 @@ class FenetrePrincipale(QMainWindow):
             if d.decoupage_modifie:
                 with CurseurAttente():
                     alignement.recalculer(self.projet)
+            for _, page in self.pages:
+                if hasattr(page, "editeur"):
+                    page.editeur.appliquer_police()
             self._titre()
             self.rafraichir_tout()
 

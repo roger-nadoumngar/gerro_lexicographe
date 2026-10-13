@@ -83,6 +83,59 @@ class Tokeniseur:
         return [m for m in self.mots(texte) if m not in self.mots_vides]
 
 
-MOTS_VIDES_FRANCAIS = """le la les un une des de du et à en il elle ils elles je tu nous vous
+class OrdreAlphabetique:
+    """Ordre de tri déclaré par le linguiste.
+
+    `alphabet` : graphèmes dans l'ordre, séparés par des espaces, multigraphes
+    compris (« a b ɓ d ɗ e ə … ng ŋ ŋg … »). Au niveau principal, les marques
+    combinantes (tons…) sont ignorées sauf si elles font partie d'un graphème
+    déclaré ; elles départagent ensuite les mots identiques. Les caractères
+    absents de l'alphabet viennent après, dans l'ordre Unicode. Sans alphabet,
+    l'ordre est alphabétique Unicode sans tenir compte des accents.
+    """
+
+    def __init__(self, alphabet=""):
+        graphemes = [normaliser(g).lower() for g in (alphabet or "").split()]
+        self.rang = {}
+        for i, g in enumerate(graphemes):
+            self.rang.setdefault(unicodedata.normalize("NFD", g), i)
+        self.longueur_max = max((len(g) for g in self.rang), default=1)
+
+    def cle(self, mot):
+        decompose = unicodedata.normalize("NFD", normaliser(mot).lower())
+        principal, secondaire = [], []
+        i = 0
+        while i < len(decompose):
+            for n in range(min(self.longueur_max, len(decompose) - i), 0, -1):
+                morceau = decompose[i:i + n]
+                if morceau in self.rang:
+                    principal.append((0, self.rang[morceau]))
+                    i += n
+                    break
+            else:
+                ch = decompose[i]
+                if unicodedata.category(ch)[0] == "M":
+                    secondaire.append(ord(ch))
+                else:
+                    principal.append((1, ord(ch)))
+                i += 1
+            # marques qui suivent un graphème reconnu : niveau secondaire
+            while i < len(decompose) and unicodedata.category(decompose[i])[0] == "M" \
+                    and decompose[i:i + 1] not in self.rang:
+                secondaire.append(ord(decompose[i]))
+                i += 1
+        return (tuple(principal), tuple(secondaire), mot)
+
+    def initiale(self, mot):
+        """Graphème initial (en-têtes de lettre du dictionnaire imprimé)."""
+        decompose = unicodedata.normalize("NFD", normaliser(mot).lower())
+        for n in range(min(self.longueur_max, len(decompose)), 0, -1):
+            if decompose[:n] in self.rang:
+                return normaliser(decompose[:n])
+        base = "".join(ch for ch in decompose[:1])
+        return normaliser(base)
+
+
+MOTS_VIDES_FRANCAIS ="""le la les un une des de du et à en il elle ils elles je tu nous vous
 que qui ce cet cette ces son sa ses leur leurs mais ou dans sur pour avec par comme au aux
 se lui même était fut être avoir a ont étaient point pas ne s on y d l qu n j t c m""".split()

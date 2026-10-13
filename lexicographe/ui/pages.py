@@ -6,16 +6,17 @@ import os
 from datetime import datetime
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import (QAbstractItemView, QFileDialog, QGridLayout, QHBoxLayout,
+from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QFileDialog, QFormLayout, QGridLayout, QHBoxLayout,
                                QHeaderView, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QPlainTextEdit, QPushButton, QSplitter, QTableWidget, QTableWidgetItem,
                                QTextBrowser, QVBoxLayout, QWidget, QDialog, QDialogButtonBox)
 
-from .. import alignement, exports, lexique, usfm
+from .. import alignement, domaines, exports, lexique, lift_import, usfm
 from ..lexique import Entree, Exemple, Sens
 from ..projet import copier_medias
 from .commun import CurseurAttente, carte, confirmer, erreur, info, surligner, titre
-from .editeur_entree import EditeurEntree
+from .domaines_ui import ArbreDomaines, DialogueDomaine
+from .editeur_entree import EditeurEntree, police_vernaculaire, remplir_categories
 
 
 class Page(QWidget):
@@ -67,6 +68,8 @@ class PageTableauDeBord(Page):
         grille = QGridLayout()
         self.chiffres = {}
         for i, (cle, libelle) in enumerate([("entrees", "entrées"), ("sens", "sens"),
+                                            ("a_verifier", "entrées à vérifier"),
+                                            ("sans_domaine", "sens sans domaine sémantique"),
                                             ("phrases_paralleles", "phrases parallèles"),
                                             ("en_attente", "propositions à examiner"),
                                             ("rejetees", "propositions rejetées")]):
@@ -78,7 +81,7 @@ class PageTableauDeBord(Page):
             l = QLabel(libelle)
             l.setObjectName("sousTitre")
             v.addWidget(l)
-            grille.addWidget(c, 0, i)
+            grille.addWidget(c, i // 4, i % 4)
             self.chiffres[cle] = chiffre
         self.racine.addLayout(grille)
 
@@ -232,7 +235,8 @@ class PageValidation(Page):
         if exemples:
             ref, vern, analyse = exemples[0]
             sens.exemples = [Exemple(vern, analyse, ref)]
-        self.editeur.charger_entree(Entree(forme=forme, sens=[sens]))
+        # la décision humaine de la page Validation vaut validation de l'entrée
+        self.editeur.charger_entree(Entree(forme=forme, statut="validé", sens=[sens]))
 
     def _afficher_preuves(self, candidat):
         lignes = alignement.preuves(self.projet, self.forme_courante, candidat)
@@ -271,6 +275,42 @@ class PageValidation(Page):
 
 
 # =============================================================================
+class DialogueMasse(QDialog):
+    """Modification de plusieurs entrées à la fois."""
+
+    def __init__(self, projet, nombre, parent=None):
+        super().__init__(parent)
+        self.projet = projet
+        self.setWindowTitle("Modifier la sélection")
+        self.domaine = None
+        form = QFormLayout(self)
+        form.addRow(QLabel(f"<b>{nombre} entrée(s) sélectionnée(s).</b> Seuls les champs choisis sont modifiés."))
+        self.statut = QComboBox()
+        self.statut.addItem("(ne pas changer)", None)
+        for s in lexique.STATUTS:
+            self.statut.addItem(s, s)
+        self.categorie = QComboBox()
+        remplir_categories(self.categorie, projet.conn, vide=False)
+        self.categorie.insertItem(0, "(ne pas changer)", None)
+        self.categorie.setCurrentIndex(0)
+        self.btn_domaine = QPushButton("(ne pas ajouter)")
+        self.btn_domaine.clicked.connect(self._choisir_domaine)
+        form.addRow("Statut :", self.statut)
+        form.addRow("Catégorie (tous les sens) :", self.categorie)
+        form.addRow("Ajouter le domaine (tous les sens) :", self.btn_domaine)
+        boutons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        boutons.accepted.connect(self.accept)
+        boutons.rejected.connect(self.reject)
+        form.addRow(boutons)
+
+    def _choisir_domaine(self):
+        d = DialogueDomaine(self.projet, self)
+        if d.exec() and d.guid:
+            self.domaine = d.guid
+            self.btn_domaine.setText(domaines.libelle(self.projet.conn, d.guid,
+                                                      self.projet.reglage("langue_analyse_code") or "fr"))
+
+
 class PageLexique(Page):
     def __init__(self, projet):
         super().__init__(projet, "Lexique")
@@ -280,62 +320,124 @@ class PageLexique(Page):
         gl = QVBoxLayout(gauche)
         gl.setContentsMargins(0, 0, 0, 0)
         self.recherche = QLineEdit()
-        self.recherche.setPlaceholderText("Rechercher une forme ou une glose…")
+        self.recherche.setPlaceholderText("Rechercher une forme, une variante ou une glose…")
         self.recherche.setClearButtonEnabled(True)
         self.recherche.textChanged.connect(self.rafraichir)
         gl.addWidget(self.recherche)
-        self.liste = _table(["Forme", "Glose(s)", "Catégorie"], etirer=(1,))
+
+        filtres = QHBoxLayout()
+        self.f_statut = QComboBox()
+        self.f_statut.addItem("tous statuts", None)
+        for s in lexique.STATUTS:
+            self.f_statut.addItem(s, s)
+        self.f_categorie = QComboBox()
+        self.f_domaine = QPushButton("tous domaines")
+        self.f_domaine.setToolTip("Filtrer par domaine sémantique (sous-domaines compris). Clic droit : retirer le filtre.")
+        self.f_domaine.clicked.connect(self._choisir_filtre_domaine)
+        self.f_domaine.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.f_domaine.customContextMenuRequested.connect(lambda _: self._choisir_filtre_domaine(effacer=True))
+        self.filtre_domaine = None
+        for w in (self.f_statut, self.f_categorie):
+            w.currentIndexChanged.connect(self.rafraichir)
+            filtres.addWidget(w, 1)
+        filtres.addWidget(self.f_domaine, 1)
+        gl.addLayout(filtres)
+
+        self.liste = _table(["Vedette", "Glose(s)", "Catégorie", "Statut"], etirer=(1,))
+        self.liste.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.liste.itemSelectionChanged.connect(self._selection)
         gl.addWidget(self.liste)
         bas = QHBoxLayout()
         nouvelle = QPushButton("+ Nouvelle entrée")
         nouvelle.clicked.connect(self._nouvelle)
+        self.btn_masse = QPushButton("Modifier la sélection…")
+        self.btn_masse.clicked.connect(self._modifier_en_masse)
+        importer = QPushButton("Importer LIFT…")
+        importer.setToolTip("Reprendre un lexique FLEx ou WeSay (fichier .lift)")
+        importer.clicked.connect(self._importer_lift)
+        bas.addWidget(nouvelle)
+        bas.addWidget(self.btn_masse)
+        bas.addWidget(importer)
+        bas.addStretch()
+        gl.addLayout(bas)
         self.compte = QLabel("")
         self.compte.setObjectName("sousTitre")
-        bas.addWidget(nouvelle)
-        bas.addStretch()
-        bas.addWidget(self.compte)
-        gl.addLayout(bas)
+        gl.addWidget(self.compte)
         separateur.addWidget(gauche)
 
         self.editeur = EditeurEntree(projet)
         self.editeur.enregistree.connect(self._enregistree)
         self.editeur.supprimee.connect(self.donnees_modifiees)
+        self.editeur.ouvrir_demande.connect(self.ouvrir_entree)
         separateur.addWidget(self.editeur)
-        separateur.setSizes([340, 640])
+        separateur.setSizes([340, 720])
         self.racine.addWidget(separateur, 1)
         self._selection_en_cours = False
+        self._remplir_filtre_categories()
+
+    def _remplir_filtre_categories(self):
+        courant = self.f_categorie.currentData()
+        self.f_categorie.blockSignals(True)
+        remplir_categories(self.f_categorie, self.projet.conn, vide=False)
+        self.f_categorie.insertItem(0, "toutes catégories", None)
+        i = self.f_categorie.findData(courant)
+        self.f_categorie.setCurrentIndex(i if i >= 0 else 0)
+        self.f_categorie.blockSignals(False)
+
+    def _choisir_filtre_domaine(self, effacer=False):
+        if effacer:
+            self.filtre_domaine = None
+            self.f_domaine.setText("tous domaines")
+        else:
+            d = DialogueDomaine(self.projet, self)
+            if not (d.exec() and d.guid):
+                return
+            self.filtre_domaine = self.projet.conn.execute("SELECT code FROM domaines WHERE guid=?",
+                                                           (d.guid,)).fetchone()[0]
+            self.f_domaine.setText(domaines.libelle(self.projet.conn, d.guid,
+                                                    self.projet.reglage("langue_analyse_code") or "fr"))
+        self.rafraichir()
 
     def rafraichir(self):
+        self._remplir_filtre_categories()
         courant = self.editeur.entree.id
-        lignes = lexique.lister_entrees(self.projet.conn, self.recherche.text())
+        lignes = lexique.lister_entrees(self.projet.conn, self.recherche.text(), statut=self.f_statut.currentData(),
+                                        categorie_id=self.f_categorie.currentData(), domaine_code=self.filtre_domaine)
+        police = police_vernaculaire(self.projet)
         self._selection_en_cours = True
         self.liste.setRowCount(len(lignes))
-        for r, (eid, forme, gloses, cats, _) in enumerate(lignes):
-            self.liste.setItem(r, 0, _item(forme, eid))
-            self.liste.setItem(r, 1, _item(gloses))
-            self.liste.setItem(r, 2, _item(cats))
-            if eid == courant:
+        for r, l in enumerate(lignes):
+            vedette = _item(lexique.vedette(l.tete, l.homographe), l.id)
+            if police:
+                vedette.setFont(police)
+            self.liste.setItem(r, 0, vedette)
+            self.liste.setItem(r, 1, _item(l.gloses))
+            self.liste.setItem(r, 2, _item(l.categories))
+            self.liste.setItem(r, 3, _item(l.statut))
+            if l.id == courant:
                 self.liste.selectRow(r)
         self._selection_en_cours = False
         total = self.projet.conn.execute("SELECT COUNT(*) FROM entrees").fetchone()[0]
         self.compte.setText(f"{len(lignes)} / {total} entrées")
         if courant and not self.editeur.modifiee:
-            self.editeur.charger(courant) if lexique.lire_entree(self.projet.conn, courant) else \
+            if lexique.lire_entree(self.projet.conn, courant):
+                self.editeur.charger_entree(lexique.lire_entree(self.projet.conn, courant), lignes=None)
+            else:
                 self.editeur.charger_entree(None)
+
+    def ids_selectionnes(self):
+        return [self.liste.item(i.row(), 0).data(Qt.UserRole) for i in self.liste.selectionModel().selectedRows()]
 
     def _selection(self):
         if self._selection_en_cours:
             return
-        lignes = self.liste.selectionModel().selectedRows()
-        if not lignes:
-            return
-        eid = self.liste.item(lignes[0].row(), 0).data(Qt.UserRole)
-        if eid == self.editeur.entree.id:
+        ids = self.ids_selectionnes()
+        self.btn_masse.setEnabled(len(ids) > 1)
+        if len(ids) != 1 or ids[0] == self.editeur.entree.id:
             return
         if not self.editeur.demander_si_modifiee():
             return
-        self.editeur.charger(eid)
+        self.editeur.charger(ids[0])
 
     def _nouvelle(self):
         if not self.editeur.demander_si_modifiee():
@@ -344,17 +446,161 @@ class PageLexique(Page):
         self.editeur.charger_entree(Entree(sens=[Sens()]))
         self.editeur.forme.setFocus()
 
+    def _modifier_en_masse(self):
+        ids = self.ids_selectionnes()
+        if len(ids) < 2:
+            erreur(self, "Modifier la sélection", "Sélectionne plusieurs entrées (Ctrl+clic ou Maj+clic).")
+            return
+        d = DialogueMasse(self.projet, len(ids), self)
+        if not d.exec():
+            return
+        if d.statut.currentData() is None and d.categorie.currentData() is None and d.domaine is None:
+            return
+        lexique.modifier_en_masse(self.projet.conn, ids, statut=d.statut.currentData(),
+                                  categorie_id=d.categorie.currentData(), ajouter_domaine=d.domaine)
+        self.donnees_modifiees.emit()
+
+    def _importer_lift(self):
+        chemin, _ = QFileDialog.getOpenFileName(self, "Importer un lexique LIFT", "", "LIFT (*.lift)")
+        if not chemin:
+            return
+        if not confirmer(self, "Importer LIFT",
+                         "Les entrées du fichier seront ajoutées au projet ; celles qui existent déjà (même "
+                         "identifiant) seront mises à jour. Une sauvegarde du projet est faite avant. Continuer ?"):
+            return
+        try:
+            self.projet.sauvegarde_automatique()
+            with CurseurAttente():
+                rapport = lift_import.importer(self.projet, chemin)
+        except Exception as e:
+            erreur(self, "Import LIFT", "Le fichier n'a pas pu être importé.", e)
+            return
+        self.donnees_modifiees.emit()
+        info(self, "Import LIFT", rapport.resume())
+
     def _enregistree(self, _eid):
         self.donnees_modifiees.emit()
 
     def ouvrir_entree(self, eid):
         if self.editeur.demander_si_modifiee():
             self.recherche.clear()
+            self.f_statut.setCurrentIndex(0)
+            self.f_categorie.setCurrentIndex(0)
+            self._choisir_filtre_domaine(effacer=True)
             self.editeur.charger(eid)
             self.rafraichir()
 
     def peut_quitter(self):
         return self.editeur.demander_si_modifiee()
+
+
+# =============================================================================
+class PageDomaines(Page):
+    """Le lexique classé par domaine sémantique (vue « dictionnaire thématique »)."""
+    ouvrir_entree = Signal(int)
+
+    def __init__(self, projet):
+        super().__init__(projet, "Domaines sémantiques",
+                         "Liste officielle de SIL. Les questions de chaque domaine aident à collecter le "
+                         "vocabulaire de façon systématique ; à droite, les mots déjà classés.")
+        separateur = QSplitter(Qt.Horizontal)
+        self.arbre = ArbreDomaines(projet)
+        self.arbre.selection_changee.connect(self._afficher_mots)
+        separateur.addWidget(self.arbre)
+        droite = QWidget()
+        dl = QVBoxLayout(droite)
+        dl.setContentsMargins(0, 0, 0, 0)
+        self.titre_mots = QLabel("<b>Mots classés dans ce domaine</b>")
+        dl.addWidget(self.titre_mots)
+        self.mots = _table(["Forme", "Glose"], etirer=(1,))
+        self.mots.itemDoubleClicked.connect(lambda item: self.ouvrir_entree.emit(
+            self.mots.item(item.row(), 0).data(Qt.UserRole)))
+        dl.addWidget(self.mots, 1)
+        separateur.addWidget(droite)
+        separateur.setSizes([700, 300])
+        self.racine.addWidget(separateur, 1)
+        ligne = QHBoxLayout()
+        self.etat = QLabel("")
+        self.etat.setObjectName("sousTitre")
+        importer = QPushButton("Importer une liste de domaines…")
+        importer.setToolTip("Fichier SemDom.xml ou LocalizedLists-xx.zip de FLEx")
+        importer.clicked.connect(self._importer)
+        ligne.addWidget(self.etat)
+        ligne.addStretch()
+        ligne.addWidget(importer)
+        self.racine.addLayout(ligne)
+
+    def rafraichir(self):
+        n = domaines.nombre(self.projet.conn)
+        if n != len(self.arbre.items):
+            self.arbre.charger()
+        self.etat.setText(f"{n} domaine(s) dans le projet")
+        guid = self.arbre.guid_courant()
+        if guid:
+            self._afficher_mots(guid)
+
+    def _afficher_mots(self, guid):
+        lignes = domaines.sens_du_domaine(self.projet.conn, guid)
+        self.titre_mots.setText(f"<b>Mots classés dans ce domaine : {len(lignes)}</b>")
+        self.mots.setRowCount(len(lignes))
+        for r, (eid, forme, glose) in enumerate(lignes):
+            self.mots.setItem(r, 0, _item(forme, eid))
+            self.mots.setItem(r, 1, _item(glose))
+
+    def _importer(self):
+        chemin, _ = QFileDialog.getOpenFileName(self, "Liste de domaines", "",
+                                                "Listes FLEx (*.xml *.zip);;Tous (*)")
+        if not chemin:
+            return
+        try:
+            with CurseurAttente():
+                n = domaines.importer(self.projet.conn, domaines.lire_liste(chemin))
+        except Exception as e:
+            erreur(self, "Domaines", "La liste n'a pas pu être lue.", e)
+            return
+        self.arbre.charger()
+        self.donnees_modifiees.emit()
+        info(self, "Domaines", f"{n} domaines importés.")
+
+
+# =============================================================================
+class PageIndexInverse(Page):
+    """Index inverse : de la langue d'analyse vers la langue documentée."""
+    ouvrir_entree = Signal(int)
+
+    def __init__(self, projet):
+        super().__init__(projet, "Index inverse",
+                         "Chaque sens apparaît sous les formes de son champ « Index inverse » (ou, s'il est "
+                         "vide, sous sa glose). C'est la partie « français → langue » du dictionnaire.")
+        self.recherche = QLineEdit()
+        self.recherche.setPlaceholderText("Rechercher dans l'index…")
+        self.recherche.setClearButtonEnabled(True)
+        self.recherche.textChanged.connect(self.rafraichir)
+        self.racine.addWidget(self.recherche)
+        self.table = _table(["Index", "Entrée", "Glose", "Catégorie"], etirer=(0, 2))
+        self.table.itemDoubleClicked.connect(lambda item: self.ouvrir_entree.emit(
+            self.table.item(item.row(), 1).data(Qt.UserRole)))
+        self.racine.addWidget(self.table, 1)
+        self.compte = QLabel("")
+        self.compte.setObjectName("sousTitre")
+        self.racine.addWidget(self.compte)
+
+    def rafraichir(self):
+        index = lexique.index_inverse(self.projet.conn, self.recherche.text())
+        lignes = [(mot, eid, vedette, glose, cat) for mot, entrees in index for eid, vedette, glose, cat in entrees]
+        self.table.setRowCount(len(lignes))
+        police = police_vernaculaire(self.projet)
+        precedent = None
+        for r, (mot, eid, vedette, glose, cat) in enumerate(lignes):
+            self.table.setItem(r, 0, _item(mot if mot != precedent else ""))
+            item = _item(vedette, eid)
+            if police:
+                item.setFont(police)
+            self.table.setItem(r, 1, item)
+            self.table.setItem(r, 2, _item(glose))
+            self.table.setItem(r, 3, _item(cat))
+            precedent = mot
+        self.compte.setText(f"{len(index)} forme(s) d'index, {len(lignes)} renvoi(s)")
 
 
 # =============================================================================

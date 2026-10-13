@@ -223,8 +223,64 @@ def _convertir_v01(conn, tables):
                  (json.dumps({"date": maintenant}),))
 
 
+SCHEMA_2 = """
+ALTER TABLE entrees ADD COLUMN forme_citation TEXT;
+ALTER TABLE entrees ADD COLUMN prononciation TEXT;
+ALTER TABLE entrees ADD COLUMN type_morph TEXT;
+ALTER TABLE entrees ADD COLUMN statut TEXT NOT NULL DEFAULT 'brouillon';
+ALTER TABLE entrees ADD COLUMN type_forme_complexe TEXT;
+ALTER TABLE sens ADD COLUMN inverse TEXT;
+CREATE TABLE variantes (
+    id INTEGER PRIMARY KEY,
+    entree_id INTEGER NOT NULL REFERENCES entrees(id) ON DELETE CASCADE,
+    forme TEXT NOT NULL,
+    type TEXT NOT NULL,
+    environnement TEXT,
+    note TEXT
+);
+CREATE INDEX variantes_entree ON variantes(entree_id);
+CREATE TABLE composants (
+    id INTEGER PRIMARY KEY,
+    entree_id INTEGER NOT NULL REFERENCES entrees(id) ON DELETE CASCADE,
+    composant_id INTEGER NOT NULL REFERENCES entrees(id) ON DELETE CASCADE,
+    ordre INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX composants_entree ON composants(entree_id);
+CREATE TABLE domaines (
+    guid TEXT PRIMARY KEY,
+    code TEXT NOT NULL,
+    parent_guid TEXT REFERENCES domaines(guid) ON DELETE CASCADE,
+    noms TEXT NOT NULL DEFAULT '{}',
+    descriptions TEXT NOT NULL DEFAULT '{}',
+    questions TEXT NOT NULL DEFAULT '[]'
+);
+CREATE INDEX domaines_code ON domaines(code);
+CREATE TABLE sens_domaines (
+    sens_id INTEGER NOT NULL REFERENCES sens(id) ON DELETE CASCADE,
+    domaine_guid TEXT NOT NULL REFERENCES domaines(guid) ON DELETE CASCADE,
+    PRIMARY KEY (sens_id, domaine_guid)
+);
+CREATE TABLE medias_liens (
+    id INTEGER PRIMARY KEY,
+    media_id INTEGER NOT NULL REFERENCES medias(id) ON DELETE CASCADE,
+    entree_id INTEGER NOT NULL REFERENCES entrees(id) ON DELETE CASCADE,
+    sens_id INTEGER REFERENCES sens(id) ON DELETE CASCADE,
+    role TEXT NOT NULL
+)
+"""
+
+
+def _migration_2(conn):
+    """Lexique complet : formes, variantes, composants, domaines sémantiques
+    officiels, index inverse, statut, médias liés aux entrées."""
+    _executer(conn, SCHEMA_2)
+    # les entrées existantes ont été validées par un humain (v0.1 ou phase 0)
+    conn.execute("UPDATE entrees SET statut='validé'")
+
+
 MIGRATIONS = [
     (1, _migration_1),
+    (2, _migration_2),
 ]
 VERSION_SCHEMA = MIGRATIONS[-1][0]
 

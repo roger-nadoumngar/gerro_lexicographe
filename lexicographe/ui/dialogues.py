@@ -2,7 +2,8 @@
 
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFileDialog, QFormLayout,
+from PySide6.QtGui import QFont
+from PySide6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFileDialog, QFontComboBox, QFormLayout,
                                QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QPlainTextEdit, QPushButton, QSpinBox, QTabWidget, QVBoxLayout, QWidget)
 
@@ -191,15 +192,41 @@ class DialogueReglages(QDialog):
         f.addRow("Seuil de contradiction (Dice) :", self.seuil)
         onglets.addTab(decoupage, "Découpage en mots")
 
+        ecriture = QWidget()
+        f = QFormLayout(ecriture)
+        aide_alpha = QLabel(
+            "Ordre alphabétique de la langue documentée : les graphèmes dans l'ordre, séparés par des espaces, "
+            "multigraphes compris (ex. : a b ɓ d ɗ e ə g i k m n ŋ ŋg o ɔ …). Le lexique et les dictionnaires "
+            "suivent cet ordre ; les tons et autres marques départagent ensuite les mots identiques. "
+            "Laisser vide pour l'ordre alphabétique habituel.")
+        aide_alpha.setWordWrap(True)
+        aide_alpha.setObjectName("sousTitre")
+        f.addRow(aide_alpha)
+        self.alphabet = QPlainTextEdit(r["alphabet_vern"])
+        self.alphabet.setFixedHeight(70)
+        self.police = QFontComboBox()
+        self.avec_police = QCheckBox("Utiliser une police particulière pour la langue documentée")
+        self.avec_police.setChecked(bool(r["police_vern"]))
+        if r["police_vern"]:
+            self.police.setCurrentFont(QFont(r["police_vern"]))
+        self.police.setEnabled(self.avec_police.isChecked())
+        self.avec_police.toggled.connect(self.police.setEnabled)
+        f.addRow("Alphabet :", self.alphabet)
+        f.addRow(self.avec_police)
+        f.addRow("Police :", self.police)
+        onglets.addTab(ecriture, "Écriture")
+
         cats = QWidget()
         cv = QVBoxLayout(cats)
-        aide = QLabel("Catégories grammaticales propres à la langue documentée.")
+        aide = QLabel("Catégories grammaticales propres à la langue documentée. Une catégorie peut en contenir "
+                      "d'autres (ex. : nom → nom comptable, nom de masse).")
         aide.setObjectName("sousTitre")
         cv.addWidget(aide)
         self.categories = QListWidget()
         cv.addWidget(self.categories)
         cl = QHBoxLayout()
-        for texte, action in [("Ajouter…", self._ajouter_cat), ("Renommer…", self._renommer_cat),
+        for texte, action in [("Ajouter…", self._ajouter_cat), ("Ajouter une sous-catégorie…", self._ajouter_sous_cat),
+                              ("Renommer…", self._renommer_cat), ("Déplacer…", self._deplacer_cat),
                               ("Supprimer", self._supprimer_cat)]:
             b = QPushButton(texte)
             b.clicked.connect(action)
@@ -216,8 +243,8 @@ class DialogueReglages(QDialog):
 
     def _remplir_categories(self):
         self.categories.clear()
-        for cid, nom, abrev, _ in lexique.categories(self.projet.conn):
-            item = QListWidgetItem(nom + (f"  ({abrev})" if abrev else ""))
+        for cid, nom, abrev, profondeur in lexique.categories_arbre(self.projet.conn):
+            item = QListWidgetItem("      " * profondeur + nom + (f"  ({abrev})" if abrev else ""))
             item.setData(Qt.UserRole, (cid, nom, abrev or ""))
             self.categories.addItem(item)
 
@@ -236,6 +263,36 @@ class DialogueReglages(QDialog):
             except Exception as e:
                 erreur(self, "Catégorie", "Cette catégorie n'a pas pu être ajoutée (nom déjà utilisé ?).", e)
             self._remplir_categories()
+
+    def _ajouter_sous_cat(self):
+        item = self.categories.currentItem()
+        if not item:
+            erreur(self, "Catégorie", "Sélectionne d'abord la catégorie parente.")
+            return
+        valeurs = self._demander_cat()
+        if valeurs:
+            try:
+                lexique.ajouter_categorie(self.projet.conn, *valeurs, parent_id=item.data(Qt.UserRole)[0])
+            except Exception as e:
+                erreur(self, "Catégorie", "Cette catégorie n'a pas pu être ajoutée (nom déjà utilisé ?).", e)
+            self._remplir_categories()
+
+    def _deplacer_cat(self):
+        item = self.categories.currentItem()
+        if not item:
+            return
+        cid, nom, _ = item.data(Qt.UserRole)
+        autres = [(c, n) for c, n, _, _ in lexique.categories(self.projet.conn) if c != cid]
+        choix, ok = QInputDialog.getItem(self, "Déplacer", f"Placer « {nom} » sous :",
+                                         ["(aucune : catégorie principale)"] + [n for _, n in autres], 0, False)
+        if not ok:
+            return
+        parent = None if choix.startswith("(") else next(c for c, n in autres if n == choix)
+        try:
+            lexique.deplacer_categorie(self.projet.conn, cid, parent)
+        except ValueError as e:
+            erreur(self, "Déplacer", str(e))
+        self._remplir_categories()
 
     def _renommer_cat(self):
         item = self.categories.currentItem()
@@ -274,6 +331,8 @@ class DialogueReglages(QDialog):
             "longueur_min_mot": str(self.longueur.value()),
             "mots_vides_analyse": " ".join(self.mots_vides.toPlainText().split()),
             "seuil_contradiction": f"{self.seuil.value():.2f}",
+            "alphabet_vern": " ".join(self.alphabet.toPlainText().split()),
+            "police_vern": self.police.currentFont().family() if self.avec_police.isChecked() else "",
         }
         avant = self.projet.reglages
         self.decoupage_modifie = any(avant.get(k) != valeurs[k] for k in self.CLES_DECOUPAGE)

@@ -19,18 +19,24 @@ justifiées et jamais appliquées sans décision humaine.
 - [x] Interface PySide6 (Qt) : tableau de bord, lexique, validation, corpus, exports, réglages
 - [x] Sauvegardes automatiques ; tests automatiques (cœur et interface)
 
-## Phase 1 — Lexique complet (inspiré de FLEx) — prochaine étape
+## Phase 1 — Lexique complet (inspiré de FLEx) ✅ (version 0.3)
 
-- [ ] Domaines sémantiques officiels SIL (liste DDP4, environ 1 800 domaines, recherche arborescente)
-- [ ] Formes : forme de citation, variantes, allomorphes, formes complexes et composants
-- [ ] Catégories hiérarchiques et traits grammaticaux propres à la langue (classes nominales, tons…)
-- [ ] Index inverse (langue d'analyse → langue documentée)
-- [ ] Prononciation (API), enregistrements audio et images liés aux entrées
-- [ ] Homographes numérotés, statut de l'entrée, édition en masse, filtres
-- [ ] Import LIFT complet (reprendre un lexique FLEx ou WeSay)
-- [ ] Systèmes d'écriture : polices, claviers, ordre de tri propre à la langue
+- [x] Domaines sémantiques officiels SIL (1 792 domaines, français et anglais, questions d'élicitation),
+      copiés depuis l'installation de FLEx ou un fichier SemDom.xml / LocalizedLists ; page Domaines
+- [x] Forme de citation, prononciation (API), type morphologique (noms FLEx), statut de l'entrée
+- [x] Variantes (libre, dialectale, orthographique, irrégulière) et allomorphes avec environnement
+- [x] Formes complexes (composé, dérivé, redoublement, expression…) et leurs composants
+- [x] Catégories hiérarchiques propres à la langue ; propriétés libres (ton, classe nominale…)
+- [x] Index inverse (langue d'analyse → langue documentée) ; page Index inverse
+- [x] Enregistrements audio et images liés aux entrées (écoute intégrée)
+- [x] Homographes numérotés, filtres (statut, catégorie, domaine), modification en masse
+- [x] Import LIFT (FLEx, WeSay) : mise à jour par identifiant, rapport détaillé, rien n'est perdu
+- [x] Export LIFT enrichi (citation, prononciation, variantes, composants, domaines, index inverse)
+- [x] Ordre alphabétique déclaré (multigraphes, tons au niveau secondaire) et police de la langue
+- [ ] Traits grammaticaux structurés (système de traits déclaré, au lieu de propriétés libres)
+- [ ] Claviers (intégration Keyman)
 
-## Phase 2 — Textes et analyse (inspiré de FLEx)
+## Phase 2 — Textes et analyse (inspiré de FLEx) — prochaine étape
 
 - [ ] Inventaire des formes de mots avec fréquences
 - [ ] Concordance (mot dans son contexte)
