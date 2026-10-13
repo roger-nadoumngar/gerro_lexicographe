@@ -36,14 +36,23 @@ justifiées et jamais appliquées sans décision humaine.
 - [ ] Traits grammaticaux structurés (système de traits déclaré, au lieu de propriétés libres)
 - [ ] Claviers (intégration Keyman)
 
-## Phase 2 — Textes et analyse (inspiré de FLEx) — prochaine étape
+## Phase 2 — Textes et analyse (inspiré de FLEx) ✅ (version 0.4)
 
-- [ ] Inventaire des formes de mots avec fréquences
-- [ ] Concordance (mot dans son contexte)
-- [ ] Interlinéaire : segmentation, glose mot à mot et morphème par morphème
-- [ ] Analyseur morphologique à règles déclarées (affixes, clitiques) relié au lexique
+- [x] Textes de terrain importés (.txt ou saisie), découpés en phrases selon des règles explicites,
+      traduction alignée phrase à phrase (refusée si le nombre de phrases diffère) ; métadonnées
+      (titre, genre, locuteur, lieu, date) ; traduction littérale et notes par phrase
+- [x] Inventaire des formes de mots : fréquences, statut d'analyse, présence au lexique, couverture du corpus
+- [x] Concordance : forme exacte, morphème, suite de caractères, expression régulière ; dans la langue
+      ou dans la traduction
+- [x] Analyseur morphologique à règles : préfixes, suffixes, clitiques et allomorphes déclarés dans le
+      lexique ; toutes les découpes proposées, les plus simples d'abord, jamais choisies à la place du linguiste
+- [x] Interlinéaire : mot, morphèmes, gloses, catégories, glose du mot ; analyses validées par forme,
+      choix par occurrence pour les mots ambigus ; découpe manuelle reliée au lexique
+- [ ] Conditions d'environnement des allomorphes appliquées par l'analyseur (affichées pour l'instant)
+- [ ] Infixes, circonfixes, redoublement
+- [ ] Export de l'interlinéaire (texte, Word, XLingPaper / FLExText)
 
-## Phase 3 — Paratext
+## Phase 3 — Paratext — prochaine étape
 
 - [ ] Lecture d'un dossier de projet Paratext (Settings.xml, livres SFM, noms des livres)
 - [ ] Lexique et glossaire interlinéaire de Paratext

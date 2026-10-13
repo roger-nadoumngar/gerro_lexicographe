@@ -284,3 +284,79 @@ def test_import_lift_depuis_la_page(fenetre, tmp_path, monkeypatch, messages):
     lex._importer_lift()
     assert lexique.chercher_par_forme(fenetre.projet.conn, "ŋgon")
     assert any(m[0] == "info" and "1 entrée(s) créée(s)" in m[2] for m in messages)
+
+
+# -- phase 2 : textes et analyse ---------------------------------------------------------------
+
+def _affixe(projet, forme, glose, type_morph):
+    return lexique.enregistrer_entree(projet.conn, lexique.Entree(forme=forme, type_morph=type_morph,
+                                                                  sens=[lexique.Sens(glose=glose)]))
+
+
+def test_import_texte_et_interlineaire(fenetre, monkeypatch):
+    from lexicographe import interlineaire as il
+    from lexicographe.ui import pages_analyse
+    projet = fenetre.projet
+    _affixe(projet, "kó", "arbre", "stem")
+    _affixe(projet, "-je", "PL", "suffix")
+
+    class Faux:
+        def __init__(self, texte, importer=False, parent=None):
+            texte.titre, texte.genre = "Conte test", "conte"
+            self.texte = texte
+            self.vern = type("Z", (), {"toPlainText": lambda s: "Kóje xyz."})()
+            self.trad = type("Z", (), {"toPlainText": lambda s: "Des arbres."})()
+        def exec(self):
+            return True
+    monkeypatch.setattr(pages_analyse, "DialogueTexte", Faux)
+    t = aller(fenetre, "Textes")
+    t._importer()
+    assert t._ref_courante == "T001 1"
+    blocs = t.vue.blocs
+    assert [(b.mot.texte, b.mot.statut) for b in blocs] == [("Kóje", il.PROPOSEE), ("xyz", il.INCONNUE)]
+
+    # clic sur le mot, validation de la découpe proposée
+    t.vue._clic(blocs[0])
+    assert t.panneau.forme == "kóje" and t.panneau.propositions.count() == 1
+    t.panneau._valider_proposition()
+    assert t.vue.blocs[0].mot.statut == il.VALIDEE
+
+    # découpe manuelle d'un mot inconnu après création de son radical
+    _affixe(projet, "xy", "chose", "stem")
+    _affixe(projet, "z", "DEM", "enclitic")
+    t.vue._clic(t.vue.blocs[1])
+    t.panneau.segmentation.setText("xy-z")
+    assert [c.currentData() is not None for c in t.panneau.combos] == [True, True]
+    t.panneau._valider_manuel()
+    assert [b.mot.statut for b in t.vue.blocs] == [il.VALIDEE, il.VALIDEE]
+
+    # traduction littérale enregistrée
+    t.litterale.setText("arbre-PL chose-DEM")
+    t._enregistrer_champs()
+    assert projet.conn.execute("SELECT traduction_litterale FROM phrases WHERE ref='T001 1'").fetchone()[0] == \
+        "arbre-PL chose-DEM"
+
+
+def test_formes_concordance_et_navigation(fenetre):
+    f = aller(fenetre, "Formes de mots")
+    assert f.table.rowCount() > 1000 and "occurrences" in f.couverture.text()
+    premiere = f.table.item(0, 0).text()
+    f.table.setCurrentCell(0, 0)
+    f._concordance()
+    c = dict(fenetre.pages)["Concordance"]
+    assert fenetre.pile.currentWidget() is c and c.table.rowCount() > 10
+    assert c.table.item(0, 2).text().lower() == premiere
+    ref = c.table.item(0, 0).text()
+    c.ouvrir_phrase.emit(ref)
+    t = dict(fenetre.pages)["Textes"]
+    assert fenetre.pile.currentWidget() is t and t._ref_courante == ref and t.vue.blocs
+
+
+def test_formes_ajout_au_lexique_avec_exemple(fenetre, messages):
+    f = aller(fenetre, "Formes de mots")
+    f.filtre.setCurrentIndex(f.filtre.findData("hors_lexique"))
+    forme = f.table.item(0, 0).text()
+    f.table.setCurrentCell(0, 0)
+    eid = f._ajouter_au_lexique()
+    e = lexique.lire_entree(fenetre.projet.conn, eid)
+    assert e.forme == forme and e.statut == "brouillon" and e.sens[0].exemples[0].reference

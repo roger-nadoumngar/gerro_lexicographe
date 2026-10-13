@@ -20,9 +20,13 @@ def cle_reference(ref):
     m = re.fullmatch(r"(\w{3}) (\d+):(\d+)", ref or "")
     if m and m.group(1) in _RANG_LIVRE:
         return (0, _RANG_LIVRE[m.group(1)], int(m.group(2)), int(m.group(3)), "")
+    # le code du texte passe avant les numéros : les phrases de deux textes ne s'entrelacent pas
     if m:
-        return (1, 0, int(m.group(2)), int(m.group(3)), m.group(1))
-    return (2, 0, 0, 0, ref or "")
+        return (1, m.group(1), int(m.group(2)), int(m.group(3)), "")
+    m = re.fullmatch(r"(\S+) (\d+)", ref or "")   # textes importés : « T001 12 »
+    if m:
+        return (1, m.group(1), 0, int(m.group(2)), "")
+    return (2, "", 0, 0, ref or "")
 
 
 def lire_usfm(chemin, code_livre=None):

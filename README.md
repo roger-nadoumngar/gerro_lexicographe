@@ -50,6 +50,9 @@ sans modifier l'original.
 | Lexique | Entrées complètes (forme de citation, prononciation, type morphologique, statut, variantes et allomorphes, formes complexes, sens, médias, relations) ; filtres, modification en masse, import LIFT |
 | Domaines | Domaines sémantiques officiels de SIL, questions d'élicitation, mots classés |
 | Index inverse | Partie langue d'analyse → langue documentée du dictionnaire |
+| Textes | Interlinéaire : chaque mot avec ses morphèmes, gloses et catégories ; analyse mot par mot ; import de textes de terrain avec métadonnées |
+| Formes de mots | Inventaire des mots du corpus, fréquences, couverture de l'analyse |
+| Concordance | Un mot, un morphème ou un motif dans son contexte |
 | Validation | Propositions du moteur, avec les phrases qui les justifient |
 | Corpus | Phrases parallèles ; import USFM / SFM, lecture Word / PDF, enregistrements audio |
 | Exports | LIFT (FLEx, WeSay, Dictionary App Builder), JSON, CSV, texte |
@@ -94,6 +97,9 @@ lexicographe/
   lexique.py                entrées, sens, variantes, composants, relations, catégories, index inverse
   domaines.py               domaines sémantiques (lecture des listes FLEx)
   lift_import.py            import LIFT (FLEx, WeSay)
+  textes.py                 textes du corpus, métadonnées, import de textes de terrain
+  morphologie.py            analyseur morphologique à règles déclarées
+  interlineaire.py          analyses validées, interlinéaire, inventaire, concordance
   alignement.py             propositions de traduction, preuves, contradictions
   usfm.py                   lecture USFM / SFM, ordre canonique des livres
   corpus.py                 corpus d'exemple intégré

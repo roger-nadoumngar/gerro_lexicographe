@@ -8,6 +8,9 @@ Organisation du paquet :
     lexique      entrées, sens, variantes, composants, relations, catégories, index inverse
     domaines     domaines sémantiques officiels (listes FLEx)
     lift_import  import LIFT (FLEx, WeSay)
+    textes       textes du corpus et leurs métadonnées
+    morphologie  analyseur morphologique à règles déclarées
+    interlineaire analyses, interlinéaire, inventaire des formes, concordance
     alignement   hypothèses de traduction à partir de phrases parallèles
     usfm         lecture des fichiers USFM / SFM
     corpus       corpus d'exemple intégré (Ruth et Job, ngambay–français)
@@ -17,4 +20,4 @@ Organisation du paquet :
 
 APP_NAME = "Gerro Lexicographe"
 APP_ID = "GerroLexicographe"
-__version__ = "0.3.0"
+__version__ = "0.4.0"

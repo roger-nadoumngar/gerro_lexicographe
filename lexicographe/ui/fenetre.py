@@ -11,6 +11,7 @@ from ..chemins import dossier_sauvegardes
 from ..projet import EXTENSION
 from .commun import CurseurAttente, erreur, info
 from .dialogues import DialogueReglages
+from .pages_analyse import PageConcordance, PageFormes, PageTextes
 from .pages import (PageCorpus, PageDomaines, PageExports, PageIndexInverse, PageLexique, PageTableauDeBord,
                     PageValidation)
 
@@ -42,6 +43,9 @@ class FenetrePrincipale(QMainWindow):
             ("Lexique", PageLexique(projet)),
             ("Domaines", PageDomaines(projet)),
             ("Index inverse", PageIndexInverse(projet)),
+            ("Textes", PageTextes(projet)),
+            ("Formes de mots", PageFormes(projet)),
+            ("Concordance", PageConcordance(projet)),
             ("Validation", PageValidation(projet)),
             ("Corpus", PageCorpus(projet)),
             ("Exports", PageExports(projet)),
@@ -53,6 +57,8 @@ class FenetrePrincipale(QMainWindow):
         for _, page in self.pages:
             if hasattr(page, "ouvrir_entree") and not isinstance(page, PageLexique):
                 page.ouvrir_entree.connect(self.ouvrir_entree)
+        dict(self.pages)["Formes de mots"].voir_concordance.connect(self.voir_concordance)
+        dict(self.pages)["Concordance"].ouvrir_phrase.connect(self.ouvrir_phrase)
         self.navigation.currentRowChanged.connect(self._changer_page)
         self._page_courante = 0
         self.navigation.setCurrentRow(0)
@@ -111,6 +117,21 @@ class FenetrePrincipale(QMainWindow):
         self.navigation.setCurrentRow([nom for nom, _ in self.pages].index("Lexique"))
         if self.pile.currentWidget() is lexique_page:
             lexique_page.ouvrir_entree(entree_id)
+
+    def _aller(self, nom):
+        self.navigation.setCurrentRow([n for n, _ in self.pages].index(nom))
+        page = dict(self.pages)[nom]
+        return page if self.pile.currentWidget() is page else None
+
+    def voir_concordance(self, forme):
+        page = self._aller("Concordance")
+        if page:
+            page.chercher_forme(forme)
+
+    def ouvrir_phrase(self, ref):
+        page = self._aller("Textes")
+        if page:
+            page.ouvrir_phrase(ref)
 
     def rafraichir_tout(self):
         # seule la page visible est recalculée ; les autres le sont quand on les affiche (_changer_page)

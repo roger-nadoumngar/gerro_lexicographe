@@ -278,9 +278,53 @@ def _migration_2(conn):
     conn.execute("UPDATE entrees SET statut='validé'")
 
 
+SCHEMA_3 = """
+CREATE TABLE textes (
+    code TEXT PRIMARY KEY,
+    titre TEXT,
+    genre TEXT,
+    locuteur TEXT,
+    lieu TEXT,
+    date TEXT,
+    notes TEXT
+);
+ALTER TABLE phrases ADD COLUMN traduction_litterale TEXT;
+ALTER TABLE phrases ADD COLUMN notes TEXT;
+CREATE TABLE analyses (
+    id INTEGER PRIMARY KEY,
+    forme TEXT NOT NULL,
+    glose_mot TEXT,
+    date TEXT
+);
+CREATE INDEX analyses_forme ON analyses(forme);
+CREATE TABLE analyse_morphemes (
+    id INTEGER PRIMARY KEY,
+    analyse_id INTEGER NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
+    ordre INTEGER NOT NULL,
+    forme TEXT NOT NULL,
+    entree_id INTEGER REFERENCES entrees(id) ON DELETE SET NULL,
+    sens_id INTEGER REFERENCES sens(id) ON DELETE SET NULL
+);
+CREATE INDEX analyse_morphemes_analyse ON analyse_morphemes(analyse_id);
+CREATE TABLE choix_occurrences (
+    ref TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    analyse_id INTEGER NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
+    PRIMARY KEY (ref, position)
+)
+"""
+
+
+def _migration_3(conn):
+    """Textes et analyse : métadonnées des textes, traduction littérale et notes des
+    phrases, analyses morphologiques validées des formes de mots."""
+    _executer(conn, SCHEMA_3)
+
+
 MIGRATIONS = [
     (1, _migration_1),
     (2, _migration_2),
+    (3, _migration_3),
 ]
 VERSION_SCHEMA = MIGRATIONS[-1][0]
 
