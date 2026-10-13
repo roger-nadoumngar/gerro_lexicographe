@@ -13,7 +13,7 @@ from .. import textes
 from ..lexique import Entree, Exemple, Sens, enregistrer_entree
 from .analyse_ui import COULEURS_STATUT, PanneauAnalyse, VueInterlineaire
 from .commun import CurseurAttente, carte, erreur, info
-from .pages import Page, _item, _table
+from .pages import Page, _item, _table, remplissage
 
 
 class DialogueTexte(QDialog):
@@ -307,7 +307,7 @@ class PageFormes(Page):
         boutons.addStretch()
         bl.addLayout(boutons)
         self.panneau = PanneauAnalyse(projet)
-        self.panneau.analyse_modifiee.connect(self.rafraichir)
+        self.panneau.analyse_modifiee.connect(self._forme_modifiee)
         boite = carte()
         QVBoxLayout(boite).addWidget(self.panneau)
         bl.addWidget(boite)
@@ -317,8 +317,36 @@ class PageFormes(Page):
         self.formes = []
 
     def rafraichir(self):
+        if getattr(self, "_deja_a_jour", False):
+            # signal émis par cette page après une mise à jour ciblée : rien à recalculer
+            self._deja_a_jour = False
+            return
         with CurseurAttente():
             self.formes = il.inventaire(self.projet)
+        self._maj_couverture()
+        self._afficher()
+
+    def _forme_modifiee(self):
+        """Après une analyse validée : seule la ligne du mot concerné est recalculée
+        (l'inventaire complet prend plusieurs secondes sur une Bible entière)."""
+        forme = self.panneau.forme
+        ctx = il.Contexte(self.projet)
+        for f in self.formes:
+            if f.forme == forme:
+                f.statut, analyse, _ = ctx.statut(forme)
+                f.analyse = f"{analyse.segmentation}  «{analyse.gloses}»" if analyse else ""
+        self._maj_couverture()
+        ligne = self.table.currentRow()
+        self._afficher()
+        if 0 <= ligne < self.table.rowCount():
+            self.table.blockSignals(True)
+            self.table.setCurrentCell(ligne, 0)
+            self.table.blockSignals(False)
+        self._deja_a_jour = True   # les autres pages seront recalculées, pas celle-ci
+        self.donnees_modifiees.emit()
+        self._deja_a_jour = False
+
+    def _maj_couverture(self):
         total = sum(f.frequence for f in self.formes) or 1
         par_statut = {}
         for f in self.formes:
@@ -328,7 +356,6 @@ class PageFormes(Page):
             if par_statut.get(statut):
                 morceaux.append(f"{statut} : {100 * par_statut[statut] / total:.1f} %")
         self.couverture.setText(" · ".join(morceaux))
-        self._afficher()
 
     def _afficher(self):
         filtre = self.filtre.currentData()
@@ -345,18 +372,19 @@ class PageFormes(Page):
                 continue
             lignes.append(f)
         lignes = lignes[:3000]
-        self.table.setRowCount(len(lignes))
-        for r, f in enumerate(lignes):
-            self.table.setItem(r, 0, _item(f.forme, f.forme))
-            for c, valeur in ((1, f.frequence), (2, f.phrases)):
-                item = _item("")
-                item.setData(Qt.DisplayRole, valeur)
-                self.table.setItem(r, c, item)
-            statut = _item(f.statut)
-            statut.setForeground(QColor(COULEURS_STATUT[f.statut]))
-            self.table.setItem(r, 3, statut)
-            self.table.setItem(r, 4, _item("oui" if f.au_lexique else ""))
-            self.table.setItem(r, 5, _item(f.analyse))
+        with remplissage(self.table):
+            self.table.setRowCount(len(lignes))
+            for r, f in enumerate(lignes):
+                self.table.setItem(r, 0, _item(f.forme, f.forme))
+                for c, valeur in ((1, f.frequence), (2, f.phrases)):
+                    item = _item("")
+                    item.setData(Qt.DisplayRole, valeur)
+                    self.table.setItem(r, c, item)
+                statut = _item(f.statut)
+                statut.setForeground(QColor(COULEURS_STATUT[f.statut]))
+                self.table.setItem(r, 3, statut)
+                self.table.setItem(r, 4, _item("oui" if f.au_lexique else ""))
+                self.table.setItem(r, 5, _item(f.analyse))
 
     def forme_courante(self):
         item = self.table.item(self.table.currentRow(), 0) if self.table.currentRow() >= 0 else None
@@ -438,17 +466,18 @@ class PageConcordance(Page):
         except ValueError as e:
             erreur(self, "Concordance", str(e))
             return
-        self.table.setRowCount(len(lignes))
-        for r, l in enumerate(lignes):
-            self.table.setItem(r, 0, _item(l.ref, l.ref))
-            gauche = _item(("…" if len(l.gauche) >= 60 else "") + l.gauche)
-            gauche.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            self.table.setItem(r, 1, gauche)
-            cle = _item(l.cle)
-            police = cle.font()
-            police.setBold(True)
-            cle.setFont(police)
-            self.table.setItem(r, 2, cle)
-            self.table.setItem(r, 3, _item(l.droite + ("…" if len(l.droite) >= 60 else "")))
-            self.table.setItem(r, 4, _item(l.traduction))
+        with remplissage(self.table):
+            self.table.setRowCount(len(lignes))
+            for r, l in enumerate(lignes):
+                self.table.setItem(r, 0, _item(l.ref, l.ref))
+                gauche = _item(("…" if len(l.gauche) >= 60 else "") + l.gauche)
+                gauche.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                self.table.setItem(r, 1, gauche)
+                cle = _item(l.cle)
+                police = cle.font()
+                police.setBold(True)
+                cle.setFont(police)
+                self.table.setItem(r, 2, cle)
+                self.table.setItem(r, 3, _item(l.droite + ("…" if len(l.droite) >= 60 else "")))
+                self.table.setItem(r, 4, _item(l.traduction))
         self.compte.setText(f"{len(lignes)} occurrence(s)" + (" (2000 au plus)" if len(lignes) >= 2000 else ""))

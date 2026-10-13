@@ -2,6 +2,7 @@
 émet `donnees_modifiees` quand elle change le projet."""
 
 import json
+from contextlib import contextmanager
 import os
 from datetime import datetime
 
@@ -46,6 +47,29 @@ def _item(texte, donnee=None):
     if donnee is not None:
         item.setData(Qt.UserRole, donnee)
     return item
+
+
+@contextmanager
+def remplissage(table):
+    """Remplissage en bloc d'un grand tableau : sans signaux ni redessin, et les colonnes
+    « ajustées au contenu » ne sont recalculées qu'une fois à la fin (sinon Qt les recalcule
+    après chaque cellule et le remplissage devient quadratique)."""
+    entete = table.horizontalHeader()
+    modes = [entete.sectionResizeMode(i) for i in range(table.columnCount())]
+    signaux = table.blockSignals(True)
+    table.setUpdatesEnabled(False)
+    for i, mode in enumerate(modes):
+        if mode == QHeaderView.ResizeToContents:
+            entete.setSectionResizeMode(i, QHeaderView.Interactive)
+    try:
+        yield
+    finally:
+        for i, mode in enumerate(modes):
+            if mode == QHeaderView.ResizeToContents:
+                table.resizeColumnToContents(i)
+                entete.setSectionResizeMode(i, mode)
+        table.setUpdatesEnabled(True)
+        table.blockSignals(signaux)
 
 
 def _table(colonnes, etirer=()):
@@ -407,17 +431,18 @@ class PageLexique(Page):
                                         categorie_id=self.f_categorie.currentData(), domaine_code=self.filtre_domaine)
         police = police_vernaculaire(self.projet)
         self._selection_en_cours = True
-        self.liste.setRowCount(len(lignes))
-        for r, l in enumerate(lignes):
-            vedette = _item(lexique.vedette(l.tete, l.homographe), l.id)
-            if police:
-                vedette.setFont(police)
-            self.liste.setItem(r, 0, vedette)
-            self.liste.setItem(r, 1, _item(l.gloses))
-            self.liste.setItem(r, 2, _item(l.categories))
-            self.liste.setItem(r, 3, _item(l.statut))
-            if l.id == courant:
-                self.liste.selectRow(r)
+        with remplissage(self.liste):
+            self.liste.setRowCount(len(lignes))
+            for r, l in enumerate(lignes):
+                vedette = _item(lexique.vedette(l.tete, l.homographe), l.id)
+                if police:
+                    vedette.setFont(police)
+                self.liste.setItem(r, 0, vedette)
+                self.liste.setItem(r, 1, _item(l.gloses))
+                self.liste.setItem(r, 2, _item(l.categories))
+                self.liste.setItem(r, 3, _item(l.statut))
+                if l.id == courant:
+                    self.liste.selectRow(r)
         self._selection_en_cours = False
         total = self.projet.conn.execute("SELECT COUNT(*) FROM entrees").fetchone()[0]
         self.compte.setText(f"{len(lignes)} / {total} entrées")
@@ -561,10 +586,11 @@ class PageDomaines(Page):
     def _afficher_mots(self, guid):
         lignes = domaines.sens_du_domaine(self.projet.conn, guid)
         self.titre_mots.setText(f"<b>Mots classés dans ce domaine : {len(lignes)}</b>")
-        self.mots.setRowCount(len(lignes))
-        for r, (eid, forme, glose) in enumerate(lignes):
-            self.mots.setItem(r, 0, _item(forme, eid))
-            self.mots.setItem(r, 1, _item(glose))
+        with remplissage(self.mots):
+            self.mots.setRowCount(len(lignes))
+            for r, (eid, forme, glose) in enumerate(lignes):
+                self.mots.setItem(r, 0, _item(forme, eid))
+                self.mots.setItem(r, 1, _item(glose))
 
     def _importer(self):
         chemin, _ = QFileDialog.getOpenFileName(self, "Liste de domaines", "",
@@ -607,18 +633,19 @@ class PageIndexInverse(Page):
     def rafraichir(self):
         index = lexique.index_inverse(self.projet.conn, self.recherche.text())
         lignes = [(mot, eid, vedette, glose, cat) for mot, entrees in index for eid, vedette, glose, cat in entrees]
-        self.table.setRowCount(len(lignes))
-        police = police_vernaculaire(self.projet)
-        precedent = None
-        for r, (mot, eid, vedette, glose, cat) in enumerate(lignes):
-            self.table.setItem(r, 0, _item(mot if mot != precedent else ""))
-            item = _item(vedette, eid)
-            if police:
-                item.setFont(police)
-            self.table.setItem(r, 1, item)
-            self.table.setItem(r, 2, _item(glose))
-            self.table.setItem(r, 3, _item(cat))
-            precedent = mot
+        with remplissage(self.table):
+            self.table.setRowCount(len(lignes))
+            police = police_vernaculaire(self.projet)
+            precedent = None
+            for r, (mot, eid, vedette, glose, cat) in enumerate(lignes):
+                self.table.setItem(r, 0, _item(mot if mot != precedent else ""))
+                item = _item(vedette, eid)
+                if police:
+                    item.setFont(police)
+                self.table.setItem(r, 1, item)
+                self.table.setItem(r, 2, _item(glose))
+                self.table.setItem(r, 3, _item(cat))
+                precedent = mot
         self.compte.setText(f"{len(index)} forme(s) d'index, {len(lignes)} renvoi(s)")
 
 
@@ -687,10 +714,11 @@ class PageCorpus(Page):
         manuelles = sorted((l for l in lignes if l[3] == "saisie_manuelle"), key=lambda l: l[0], reverse=True)
         autres = sorted((l for l in lignes if l[3] != "saisie_manuelle"), key=lambda l: usfm.cle_reference(l[0]))
         lignes = (manuelles + autres)[:2000]
-        self.table.setRowCount(len(lignes))
-        for r, ligne in enumerate(lignes):
-            for c, valeur in enumerate(ligne):
-                self.table.setItem(r, c, _item(valeur, ligne[0] if c == 0 else None))
+        with remplissage(self.table):
+            self.table.setRowCount(len(lignes))
+            for r, ligne in enumerate(lignes):
+                for c, valeur in enumerate(ligne):
+                    self.table.setItem(r, c, _item(valeur, ligne[0] if c == 0 else None))
         total = self.projet.conn.execute("SELECT COUNT(*) FROM phrases").fetchone()[0]
         self.compte.setText(f"{len(lignes)} affichée(s) sur {total}" + (" (2000 au plus)" if len(lignes) == 2000 else ""))
 

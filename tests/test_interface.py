@@ -392,10 +392,57 @@ def test_page_imports_et_menu(fenetre, monkeypatch):
     imports = aller(fenetre, "Imports")
     from PySide6.QtWidgets import QPushButton
     textes = [b.text() for b in imports.findChildren(QPushButton)]
-    assert textes.count("Importer…") == 7
+    assert textes.count("Importer…") == 8
     menu = [a.text() for a in fenetre.menuBar().actions()[0].menu().actions()]
     assert "Importer un projet FLEx…" in menu and "Tous les imports…" in menu
     appels = []
     monkeypatch.setattr("lexicographe.ui.dialogues.DialogueFlex.exec", lambda self: appels.append(1) or False)
     imports.findChildren(QPushButton)[0].click()
     assert appels == [1], "le premier bouton ouvre le choix du projet FLEx"
+
+
+def test_dialogue_paratext(fenetre, tmp_path, monkeypatch, messages):
+    from lexicographe import paratext
+    from lexicographe.ui import paratext_ui
+    from tests.test_paratext import _projet_pt
+    racine = tmp_path / "PT"
+    _projet_pt(racine, "sbanb", "sba", "Ngambay", {"RUT": "\\id RUT\n\\c 1\n\\v 1 Kó ndɔ.\n"})
+    _projet_pt(racine, "FRB", "fr", "Français", {"RUT": "\\id RUT\n\\c 1\n\\v 1 Un arbre.\n"})
+    monkeypatch.setattr(paratext, "dossier_projets_paratext", lambda: str(racine))
+    d = paratext_ui.DialogueParatext(fenetre.projet)
+    assert d.projet_pt.nom == "sbanb", "le projet dans la langue documentée est proposé d'abord"
+    assert d.cote.currentData() == "vernaculaire" and d.avec_termes.isEnabled()
+    d.projets.setCurrentRow([d.projets.item(i).data(0x0100).nom for i in range(d.projets.count())].index("FRB"))
+    assert d.cote.currentData() == "analyse" and not d.avec_glossaire.isEnabled()
+    assert d.livres_coches() == ["RUT"]
+
+    def choisir_frb(dialogue):
+        noms = [dialogue.projets.item(i).data(0x0100).nom for i in range(dialogue.projets.count())]
+        dialogue.projets.setCurrentRow(noms.index("FRB"))
+        return True
+    monkeypatch.setattr(paratext_ui.DialogueParatext, "exec", choisir_frb)
+    assert paratext_ui.importer_paratext(fenetre, fenetre.projet)
+    assert fenetre.projet.conn.execute("SELECT analyse FROM phrases WHERE ref='RUT 1:1'").fetchone()[0] == "Un arbre."
+    assert any(m[0] == "info" and "1 livre(s)" in m[2] for m in messages)
+
+
+def test_pages_recalculees_seulement_si_donnees_changees(fenetre, monkeypatch):
+    from lexicographe.ui import pages_analyse
+    appels = []
+    original = pages_analyse.il.inventaire
+    monkeypatch.setattr(pages_analyse.il, "inventaire", lambda p: appels.append(1) or original(p))
+    f = aller(fenetre, "Formes de mots")
+    aller(fenetre, "Lexique")
+    aller(fenetre, "Formes de mots")
+    assert len(appels) == 1, "pas de recalcul si rien n'a changé"
+    # validation d'une analyse dans la page : mise à jour ciblée, sans inventaire complet
+    _affixe(fenetre.projet, "ɓa", "venir", "stem")
+    ligne = next(r for r in range(f.table.rowCount()) if f.table.item(r, 0).text() == "ɓa")
+    f.table.setCurrentCell(ligne, 0)
+    f.panneau._valider_proposition()
+    assert len(appels) == 1 and f.table.item(f.table.currentRow(), 3).text() == "validée"
+    aller(fenetre, "Lexique")
+    lex = dict(fenetre.pages)["Lexique"]
+    _nouvelle_entree(lex, "zzz", "test")
+    aller(fenetre, "Formes de mots")
+    assert len(appels) == 2, "recalcul après une modification faite ailleurs"

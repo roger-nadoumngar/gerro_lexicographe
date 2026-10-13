@@ -54,14 +54,20 @@ justifiées et jamais appliquées sans décision humaine.
 - [ ] Infixes, circonfixes, redoublement
 - [ ] Export de l'interlinéaire (texte, Word, XLingPaper / FLExText)
 
-## Phase 3 — Paratext — prochaine étape
+## Phase 3 — Paratext ✅ (version 0.5)
 
-- [ ] Lecture d'un dossier de projet Paratext (Settings.xml, livres SFM, noms des livres)
-- [ ] Lexique et glossaire interlinéaire de Paratext
-- [ ] Rendus des termes bibliques
-- [ ] Lecture seule : le projet Paratext n'est jamais modifié
+- [x] Détection des projets Paratext de l'ordinateur (langue, nom, versification, livres présents)
+- [x] Livres USFM importés verset par verset, dans la langue documentée ou dans la traduction :
+      deux projets donnent un corpus parallèle (avertissement si les versifications diffèrent,
+      signalement des livres sans texte)
+- [x] Glossaire interlinéaire de Paratext (Lexicon.xml) : mots et morphèmes glosés ajoutés au lexique
+      sans doublons
+- [x] Rendus validés des termes bibliques (pas les rendus devinés), avec glose française de Paratext
+      quand elle existe, catégorie et note du terme d'origine
+- [x] Lecture seule : les projets Paratext ne sont jamais modifiés (vérifié par empreinte des fichiers)
+- [ ] Analyses du glossaire interlinéaire de Paratext reprises comme analyses de mots dans les textes
 
-## Phase 4 — Syllabaires (inspiré de PrimerPrep)
+## Phase 4 — Syllabaires (inspiré de PrimerPrep) — prochaine étape
 
 - [ ] Inventaire des graphèmes (multigraphes déclarés : ng, ŋg, nj…) et des tons
 - [ ] Fréquences dans le corpus

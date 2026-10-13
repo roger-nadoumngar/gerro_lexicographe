@@ -9,6 +9,7 @@ Organisation du paquet :
     domaines     domaines sémantiques officiels (listes FLEx)
     lift_import  import LIFT (FLEx, WeSay)
     flex_import  import direct d'un projet FLEx (.fwdata), en lecture seule
+    paratext     lecture des projets Paratext (livres, glossaire, termes bibliques)
     textes       textes du corpus et leurs métadonnées
     morphologie  analyseur morphologique à règles déclarées
     interlineaire analyses, interlinéaire, inventaire des formes, concordance
@@ -21,4 +22,4 @@ Organisation du paquet :
 
 APP_NAME = "Gerro Lexicographe"
 APP_ID = "GerroLexicographe"
-__version__ = "0.4.1"
+__version__ = "0.5.0"

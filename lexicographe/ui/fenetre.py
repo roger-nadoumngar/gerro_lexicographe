@@ -12,6 +12,7 @@ from ..projet import EXTENSION
 from .commun import CurseurAttente, erreur, info
 from .dialogues import DialogueReglages
 from .pages_analyse import PageConcordance, PageFormes, PageTextes
+from .paratext_ui import importer_paratext
 from .pages import (PageCorpus, PageDomaines, PageExports, PageImports, PageIndexInverse, PageLexique, PageTableauDeBord,
                     PageValidation)
 
@@ -43,6 +44,9 @@ class FenetrePrincipale(QMainWindow):
         imports = PageImports(projet, [
             ("Projet FLEx", "Reprendre un projet FLEx de cet ordinateur (lexique, textes et analyses "
                             "interlinéaires). Le projet FLEx est seulement lu.", lexique_p._importer_flex),
+            ("Projet Paratext", "Livres traduits (corpus, langue du projet ou traduction pour un corpus parallèle), "
+                                "glossaire interlinéaire et rendus des termes bibliques. Seulement lu.",
+             self._importer_paratext),
             ("Fichier LIFT (FLEx, WeSay)", "Lexique exporté par FLEx, WeSay ou un autre outil SIL.",
              lexique_p._importer_lift),
             ("Texte de terrain (.txt)", "Conte, récit, conversation… avec sa traduction et ses informations "
@@ -96,6 +100,7 @@ class FenetrePrincipale(QMainWindow):
              lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(dossier_sauvegardes()))),
             (None, None, None),
             ("Importer un projet FLEx…", None, dict(self.pages)["Lexique"]._importer_flex),
+            ("Importer un projet Paratext…", None, self._importer_paratext),
             ("Importer un fichier LIFT…", None, dict(self.pages)["Lexique"]._importer_lift),
             ("Tous les imports…", None, lambda: self._aller("Imports")),
             (None, None, None),
@@ -133,7 +138,15 @@ class FenetrePrincipale(QMainWindow):
             return
         self._page_courante = index
         self.pile.setCurrentIndex(index)
-        self.pages[index][1].rafraichir()
+        page = self.pages[index][1]
+        # une page n'est recalculée que si les données ont changé depuis son dernier affichage
+        if getattr(page, "perime", True):
+            page.rafraichir()
+            page.perime = False
+
+    def _importer_paratext(self):
+        if importer_paratext(self, self.projet):
+            self.rafraichir_tout()
 
     def ouvrir_entree(self, entree_id):
         """Affiche une entrée dans la page Lexique."""
@@ -158,8 +171,13 @@ class FenetrePrincipale(QMainWindow):
             page.ouvrir_phrase(ref)
 
     def rafraichir_tout(self):
-        # seule la page visible est recalculée ; les autres le sont quand on les affiche (_changer_page)
-        self.pile.currentWidget().rafraichir()
+        # seule la page visible est recalculée ; les autres sont marquées périmées et le seront
+        # quand on les affichera (_changer_page)
+        for _, page in self.pages:
+            page.perime = True
+        courante = self.pile.currentWidget()
+        courante.rafraichir()
+        courante.perime = False
 
     def _reglages(self):
         d = DialogueReglages(self.projet, self)
