@@ -446,3 +446,16 @@ def test_pages_recalculees_seulement_si_donnees_changees(fenetre, monkeypatch):
     _nouvelle_entree(lex, "zzz", "test")
     aller(fenetre, "Formes de mots")
     assert len(appels) == 2, "recalcul après une modification faite ailleurs"
+
+
+def test_colonnes_reglables_a_la_souris(fenetre):
+    from PySide6.QtWidgets import QHeaderView
+    lex = aller(fenetre, "Lexique")
+    _nouvelle_entree(lex, "kó", "arbre")
+    entete = lex.liste.horizontalHeader()
+    assert {entete.sectionResizeMode(i) for i in range(lex.liste.columnCount())} == {QHeaderView.Interactive}
+    lex.liste.setColumnWidth(1, 333)
+    lex.rafraichir()
+    assert lex.liste.columnWidth(1) == 333, "une largeur réglée par l'utilisateur est conservée"
+    ed = lex.editeur
+    assert ed.onglets.widget(0).exemples.horizontalHeader().sectionResizeMode(0) == QHeaderView.Interactive

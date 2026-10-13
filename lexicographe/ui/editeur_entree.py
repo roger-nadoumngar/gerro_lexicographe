@@ -25,6 +25,15 @@ def _texte(table, ligne, col):
     return item.text().strip() if item else ""
 
 
+def colonnes_reglables(table, largeurs):
+    """Colonnes réglables à la souris, avec des largeurs de départ ; la dernière occupe le reste."""
+    entete = table.horizontalHeader()
+    entete.setSectionResizeMode(QHeaderView.Interactive)
+    entete.setStretchLastSection(True)
+    for i, largeur in enumerate(largeurs):
+        table.setColumnWidth(i, largeur)
+
+
 def police_vernaculaire(projet, taille=None):
     """Police déclarée pour la langue documentée, ou None."""
     nom = projet.reglage("police_vern")
@@ -93,8 +102,7 @@ class OngletSens(QGroupBox):
         self.definition.setFixedHeight(56)
         self.exemples = QTableWidget(0, 3)
         self.exemples.setHorizontalHeaderLabels(["Exemple (langue)", "Traduction", "Référence"])
-        self.exemples.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        self.exemples.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        colonnes_reglables(self.exemples, (230, 210))
         self.exemples.setWordWrap(True)
         self.exemples.setMinimumHeight(100)
 
@@ -318,8 +326,7 @@ class EditeurEntree(QWidget):
         bv = QVBoxLayout(boite_var)
         self.variantes = QTableWidget(0, 4)
         self.variantes.setHorizontalHeaderLabels(["Forme", "Type", "Environnement", "Note"])
-        for col in (0, 2, 3):
-            self.variantes.horizontalHeader().setSectionResizeMode(col, QHeaderView.Stretch)
+        colonnes_reglables(self.variantes, (130, 170, 150))
         self.variantes.setMinimumHeight(90)
         bv.addWidget(self.variantes)
         bv.addWidget(_boutons(("+ Variante", lambda: self._ajouter_variante(Variante())),
@@ -379,7 +386,7 @@ class EditeurEntree(QWidget):
         pb = QVBoxLayout(prop_boite)
         self.proprietes = QTableWidget(0, 2)
         self.proprietes.setHorizontalHeaderLabels(["Nom", "Valeur"])
-        self.proprietes.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        colonnes_reglables(self.proprietes, (120,))
         self.proprietes.setMinimumHeight(70)
         pb.addWidget(self.proprietes)
         pb.addWidget(_boutons(("+", lambda: self._ajouter_propriete()),

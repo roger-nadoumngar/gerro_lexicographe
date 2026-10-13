@@ -49,39 +49,55 @@ def _item(texte, donnee=None):
     return item
 
 
+LARGEUR_MAX_COLONNE = 280      # largeur de départ maximale d'une colonne (pixels logiques)
+
+
+def ajuster_colonnes(table):
+    """Largeurs de départ d'après le contenu, plafonnées pour qu'aucune colonne n'écrase les
+    autres ; les colonnes « à étirer » reçoivent au moins une largeur confortable."""
+    etirer = table.property("etirer") or []
+    for i in range(table.columnCount()):
+        table.resizeColumnToContents(i)
+        largeur = min(table.columnWidth(i), LARGEUR_MAX_COLONNE)
+        if i in etirer:
+            largeur = max(largeur, 180)
+        table.setColumnWidth(i, largeur)
+
+
 @contextmanager
 def remplissage(table):
-    """Remplissage en bloc d'un grand tableau : sans signaux ni redessin, et les colonnes
-    « ajustées au contenu » ne sont recalculées qu'une fois à la fin (sinon Qt les recalcule
-    après chaque cellule et le remplissage devient quadratique)."""
-    entete = table.horizontalHeader()
-    modes = [entete.sectionResizeMode(i) for i in range(table.columnCount())]
+    """Remplissage en bloc d'un grand tableau : sans signaux ni redessin (sinon Qt redessine
+    et recalcule après chaque cellule et le remplissage devient quadratique). Les largeurs de
+    colonnes ne sont calculées qu'au premier remplissage : ensuite, celles que l'utilisateur
+    a réglées à la souris sont conservées."""
     signaux = table.blockSignals(True)
     table.setUpdatesEnabled(False)
-    for i, mode in enumerate(modes):
-        if mode == QHeaderView.ResizeToContents:
-            entete.setSectionResizeMode(i, QHeaderView.Interactive)
     try:
         yield
     finally:
-        for i, mode in enumerate(modes):
-            if mode == QHeaderView.ResizeToContents:
-                table.resizeColumnToContents(i)
-                entete.setSectionResizeMode(i, mode)
+        if not table.property("colonnes_ajustees") and table.rowCount():
+            ajuster_colonnes(table)
+            table.setProperty("colonnes_ajustees", True)
         table.setUpdatesEnabled(True)
         table.blockSignals(signaux)
 
 
 def _table(colonnes, etirer=()):
+    """Tableau en lecture seule ; toutes les colonnes se règlent à la souris (tirer le bord de
+    l'en-tête ; double-clic sur le bord : ajuster au contenu), la dernière occupe le reste."""
     t = QTableWidget(0, len(colonnes))
     t.setHorizontalHeaderLabels(colonnes)
     t.setSelectionBehavior(QAbstractItemView.SelectRows)
     t.setEditTriggers(QAbstractItemView.NoEditTriggers)
     t.verticalHeader().setVisible(False)
     t.setAlternatingRowColors(True)
-    for i in range(len(colonnes)):
-        t.horizontalHeader().setSectionResizeMode(
-            i, QHeaderView.Stretch if i in etirer else QHeaderView.ResizeToContents)
+    t.setProperty("etirer", list(etirer))
+    entete = t.horizontalHeader()
+    entete.setSectionResizeMode(QHeaderView.Interactive)
+    entete.setStretchLastSection(True)
+    entete.setMinimumSectionSize(40)
+    entete.setToolTip("Tirer le bord d'une colonne pour la redimensionner ; double-clic sur le bord : "
+                      "ajuster au contenu.")
     return t
 
 
