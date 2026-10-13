@@ -386,3 +386,16 @@ def test_import_projet_flex_depuis_l_accueil(app, tmp_path, messages, monkeypatc
         assert any(m[0] == "info" and "4 entrée(s) créée(s)" in m[2] for m in messages)
     finally:
         projet.fermer()
+
+
+def test_page_imports_et_menu(fenetre, monkeypatch):
+    imports = aller(fenetre, "Imports")
+    from PySide6.QtWidgets import QPushButton
+    textes = [b.text() for b in imports.findChildren(QPushButton)]
+    assert textes.count("Importer…") == 7
+    menu = [a.text() for a in fenetre.menuBar().actions()[0].menu().actions()]
+    assert "Importer un projet FLEx…" in menu and "Tous les imports…" in menu
+    appels = []
+    monkeypatch.setattr("lexicographe.ui.dialogues.DialogueFlex.exec", lambda self: appels.append(1) or False)
+    imports.findChildren(QPushButton)[0].click()
+    assert appels == [1], "le premier bouton ouvre le choix du projet FLEx"

@@ -12,7 +12,7 @@ from ..projet import EXTENSION
 from .commun import CurseurAttente, erreur, info
 from .dialogues import DialogueReglages
 from .pages_analyse import PageConcordance, PageFormes, PageTextes
-from .pages import (PageCorpus, PageDomaines, PageExports, PageIndexInverse, PageLexique, PageTableauDeBord,
+from .pages import (PageCorpus, PageDomaines, PageExports, PageImports, PageIndexInverse, PageLexique, PageTableauDeBord,
                     PageValidation)
 
 
@@ -38,16 +38,32 @@ class FenetrePrincipale(QMainWindow):
         h.addWidget(self.pile, 1)
         self.setCentralWidget(centre)
 
+        lexique_p, domaines_p, textes_p, corpus_p = (PageLexique(projet), PageDomaines(projet), PageTextes(projet),
+                                                     PageCorpus(projet))
+        imports = PageImports(projet, [
+            ("Projet FLEx", "Reprendre un projet FLEx de cet ordinateur (lexique, textes et analyses "
+                            "interlinéaires). Le projet FLEx est seulement lu.", lexique_p._importer_flex),
+            ("Fichier LIFT (FLEx, WeSay)", "Lexique exporté par FLEx, WeSay ou un autre outil SIL.",
+             lexique_p._importer_lift),
+            ("Texte de terrain (.txt)", "Conte, récit, conversation… avec sa traduction et ses informations "
+                                        "(genre, locuteur, lieu, date).", textes_p._importer),
+            ("Livre biblique (USFM / SFM)", "Fichier Paratext ou autre, dans la langue du projet ou dans la "
+                                            "langue d'analyse.", corpus_p._importer_usfm),
+            ("Document Word ou PDF", "Lecture du texte pour en copier des phrases.", corpus_p._lire_document),
+            ("Enregistrement audio", "Fichier conservé dans le dossier du projet.", corpus_p._importer_audio),
+            ("Liste de domaines sémantiques", "Fichier SemDom.xml ou LocalizedLists de FLEx.", domaines_p._importer),
+        ])
         self.pages = [
             ("Tableau de bord", PageTableauDeBord(projet)),
-            ("Lexique", PageLexique(projet)),
-            ("Domaines", PageDomaines(projet)),
+            ("Lexique", lexique_p),
+            ("Domaines", domaines_p),
             ("Index inverse", PageIndexInverse(projet)),
-            ("Textes", PageTextes(projet)),
+            ("Textes", textes_p),
             ("Formes de mots", PageFormes(projet)),
             ("Concordance", PageConcordance(projet)),
             ("Validation", PageValidation(projet)),
-            ("Corpus", PageCorpus(projet)),
+            ("Corpus", corpus_p),
+            ("Imports", imports),
             ("Exports", PageExports(projet)),
         ]
         for nom, page in self.pages:
@@ -74,6 +90,10 @@ class FenetrePrincipale(QMainWindow):
             ("Enregistrer une copie du projet…", None, self._copie),
             ("Ouvrir le dossier des sauvegardes", None,
              lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(dossier_sauvegardes()))),
+            (None, None, None),
+            ("Importer un projet FLEx…", None, dict(self.pages)["Lexique"]._importer_flex),
+            ("Importer un fichier LIFT…", None, dict(self.pages)["Lexique"]._importer_lift),
+            ("Tous les imports…", None, lambda: self._aller("Imports")),
             (None, None, None),
             ("Réglages du projet…", "Ctrl+,", self._reglages),
             (None, None, None),

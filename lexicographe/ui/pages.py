@@ -794,6 +794,29 @@ class PageCorpus(Page):
 
 
 # =============================================================================
+class PageImports(Page):
+    """Tous les imports réunis ; chaque carte appelle l'action de la page concernée."""
+
+    def __init__(self, projet, actions):
+        super().__init__(projet, "Imports", "Les fichiers importés ne sont jamais modifiés. Avant un import de "
+                                            "lexique, une sauvegarde du projet est faite.")
+        for nom, aide, action in actions:
+            c = carte()
+            h = QHBoxLayout(c)
+            v = QVBoxLayout()
+            v.addWidget(QLabel(f"<b>{nom}</b>"))
+            a = QLabel(aide)
+            a.setObjectName("sousTitre")
+            a.setWordWrap(True)
+            v.addWidget(a)
+            h.addLayout(v, 1)
+            b = QPushButton("Importer…")
+            b.clicked.connect(action)
+            h.addWidget(b)
+            self.racine.addWidget(c)
+        self.racine.addStretch()
+
+
 class PageExports(Page):
     FORMATS = [
         ("LIFT (FLEx, WeSay, Dictionary App Builder)", "lift", "LIFT (*.lift)", exports.exporter_lift,
