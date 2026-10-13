@@ -1,94 +1,105 @@
-# Lexicographe Ngambay
+# Gerro Lexicographe
 
-Outil de lexicographie assisté par IA pour le ngambay (Tchad), avec le
-français comme langue pivot grammatical. Projet pilote pour une future
-plateforme de lexicographie destinée aux langues sous-documentées,
-combinant les fonctions de FLEx, WeSay et Bloom (SIL International)
-dans un seul logiciel moderne.
+Logiciel de lexicographie et de documentation des langues, pensé pour les
+linguistes qui travaillent sur des langues peu documentées. Il réunit à terme
+dans un seul outil les fonctions de FLEx (lexique et analyse), WeSay (collecte
+avec la communauté), PrimerPrep (syllabaires) et Bloom (livres), lit les
+projets Paratext, et produit dictionnaires imprimés et applications Android.
 
-## Fonctionnement
+Projet pilote : le **ngambay** (Tchad, code ISO 639-3 `sba`), avec le français
+comme langue d'analyse.
 
-Le corpus permet au moteur de proposer des hypothèses à partir des versets présents dans les deux fichiers. Les textes sources JSON ne sont pas modifiés par le logiciel.
+## Principe : des règles explicites, pas de devinettes
 
-### Couverture des références
-
-Le contrôle des clés JSON relève 1 155 références ngambay (RUT : 85, JOB : 1 070) et 1 146 références françaises (RUT : 85, JOB : 1 061). Les 1 146 références françaises correspondent à des références présentes dans le fichier ngambay. Huit versets présents dans le fichier source français mais absents du corpus ngambay ne sont pas importés.
-
-Lors de l'initialisation d'une base vide, les 1 146 références communes sont chargées dans la base et utilisées par le moteur. Neuf références ngambay n'ont pas de marqueur de verset correspondant dans la source USFM consultée : JOB 34:37, JOB 38:39–41, JOB 40:29–32 et JOB 41:26. Leur équivalence de versification reste à vérifier ; aucun texte n'a été deviné pour ces clés. Les nombres décrivent les références, pas l'exactitude linguistique des textes.
-
-Les versets français ajoutés proviennent de la Louis Segond 1910, fichiers USFM fraLSG publiés par [eBible.org](https://ebible.org/find/details.php?id=fraLSG) ([archive USFM](https://ebible.org/Scriptures/fraLSG_usfm.zip)). La fiche source déclare cette édition dans le domaine public.
-
-Le moteur apprend en continu : chaque nouvelle phrase ajoutée (onglet
-"Concordance active") renforce ou contredit les hypothèses existantes.
-
-Les textes sont normalisés en Unicode NFC avant l'analyse : le corpus
-ngambay mélange lettres accentuées précomposées et décomposées, et sans
-normalisation un même mot serait compté comme deux mots différents.
-
-À chaque démarrage, les versets du corpus intégré absents d'une base
-existante y sont ajoutés. Les versets importés (USFM) ou saisis à la main
-ne sont jamais réécrits.
+- **Le linguiste déclare les règles** de sa langue (caractères qui font partie
+  des mots, catégories grammaticales…) ; le logiciel les applique.
+- **Les propositions automatiques sont justifiées.** Le moteur d'alignement
+  propose une traduction pour chaque mot à partir de phrases parallèles
+  (coefficient de Dice, formule affichée), et montre les phrases sur
+  lesquelles repose chaque proposition. Rien n'entre dans le lexique sans
+  décision humaine.
+- **Aucune perte de données** : les fichiers importés ne sont jamais modifiés,
+  chaque projet est sauvegardé automatiquement, et une base qui doit être mise
+  à jour est copiée avant la mise à jour.
 
 ## Installation
 
-Nécessite Python 3.10 ou plus récent (avec Tkinter, inclus par défaut
-sur la plupart des installations Python Windows/Mac).
+Python 3.10 ou plus récent.
 
 ```bash
 git clone https://github.com/roger-nadoumngar/gerro_lexicographe
 cd gerro_lexicographe
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
 python app.py
 ```
 
-Bibliothèques optionnelles : `pylexique` (suggestion grammaticale),
-`python-docx` (import Word), `pypdf` (import PDF).
+Sous macOS ou Linux, l'activation de l'environnement est `source .venv/bin/activate`.
+
+## Utilisation
+
+Au premier lancement, choisis ou crée un **projet** : un projet documente une
+langue et tient dans un seul fichier `.lexique`. Une base de la version 0.1
+(`lexique_ngambay.db`) est détectée et convertie automatiquement en projet,
+sans modifier l'original.
+
+| Page | Rôle |
+|---|---|
+| Tableau de bord | Chiffres du projet, contradictions détectées (garder ou adopter) |
+| Lexique | Entrées à plusieurs sens : glose, catégorie, domaine, définition, exemples, notes, propriétés, relations |
+| Validation | Propositions du moteur, avec les phrases qui les justifient |
+| Corpus | Phrases parallèles ; import USFM / SFM, lecture Word / PDF, enregistrements audio |
+| Exports | LIFT (FLEx, WeSay, Dictionary App Builder), JSON, CSV, texte |
+
+**Réglages du projet** (menu Fichier) : langues et codes ISO, règles de
+découpage en mots, mots vides de la langue d'analyse, seuil des
+contradictions, catégories grammaticales.
+
+## Données
+
+- Projets : `%LOCALAPPDATA%\GerroLexicographe\Projets\` (Windows),
+  `~/Library/Application Support/GerroLexicographe/Projets/` (macOS),
+  `~/.local/share/GerroLexicographe/Projets/` (Linux).
+- Sauvegardes automatiques (10 dernières par projet) : dossier `Sauvegardes`
+  à côté, accessible par le menu Fichier.
+- Les enregistrements audio d'un projet sont copiés dans le dossier
+  `<projet>_medias` à côté du fichier `.lexique`.
+
+## Corpus d'exemple
+
+Ruth et Job en ngambay et en français (Louis Segond 1910, domaine public,
+fichiers USFM fraLSG d'[eBible.org](https://ebible.org/find/details.php?id=fraLSG)).
+1 146 références communes ; neuf références ngambay sans équivalent dans la
+source française consultée (JOB 34:37, 38:39–41, 40:29–32, 41:26) restent à
+vérifier — aucun texte n'a été deviné. Le texte ngambay est normalisé en
+Unicode NFC : la source mélangeait lettres précomposées et décomposées.
+
+## Développement
+
+```
+app.py                      lanceur (python app.py)
+lexicographe/
+  texte.py                  normalisation Unicode, découpage en mots à règles
+  base.py                   schéma SQLite versionné, migrations, conversion v0.1
+  projet.py                 projets (.lexique), réglages, sauvegardes
+  lexique.py                entrées, sens, exemples, relations, catégories
+  alignement.py             propositions de traduction, preuves, contradictions
+  usfm.py                   lecture USFM / SFM, ordre canonique des livres
+  corpus.py                 corpus d'exemple intégré
+  exports.py                LIFT, JSON, CSV, texte
+  ressources/corpus/        Ruth et Job (ngambay, français)
+  ui/                       interface PySide6 (Qt)
+tests/                      tests automatiques (pytest)
+```
 
 ```bash
-pip install pylexique "setuptools<81" python-docx pypdf
+pip install pytest
+python -m pytest tests
 ```
 
-`pylexique` dépend encore de `pkg_resources`, retiré de `setuptools` à
-partir de la version 81 : sans la contrainte `"setuptools<81"`, il
-s'installe mais ne se charge pas, et la suggestion grammaticale reste
-désactivée.
-
-## Structure du projet
-
-```
-app.py                 # Logiciel complet (moteur + interface)
-ngambay_verses.json     # Corpus ngambay (Ruth + Job), extrait de fichiers USFM
-french_verses.json      # Références françaises du corpus (Segond 1910)
-INSTRUCTIONS_EXE.txt    # Comment générer un .exe Windows avec PyInstaller
-```
-
-## Feuille de route
-
-- [x] Extraction du corpus USFM (Ruth, Job)
-- [x] Alignement automatique ngambay-français
-- [x] Interface de validation humaine
-- [x] Concordance active (apprentissage incrémental)
-- [x] Fiche complète : exemple de phrase, définition, notes, relations lexicales
-- [ ] Vérification de la couverture bilingue (références manquantes de Job et Ruth)
-- [x] Résolution des contradictions (garder ou adopter la nouvelle traduction)
-- [x] Export LIFT 0.13 (import dans FLEx / WeSay ; langue `sba`, glose en `fr`)
-- [ ] Export Bloom, USFM
-- [ ] Reconnaissance vocale ngambay (phase ultérieure)
-
-## Licence des données sources
-
-Le texte français utilisé comme pivot (Louis Segond 1910) est dans le
-domaine public.
+La feuille de route complète est dans [FEUILLE_DE_ROUTE.md](FEUILLE_DE_ROUTE.md).
 
 ## À propos
 
 Projet développé dans le cadre d'une initiative liée à SIL International.
-
-## Stockage persistant des données
-
-La base `lexique_ngambay.db` et les fichiers audio sont conservés dans un dossier utilisateur accessible, même si l'application est installée dans un dossier protégé :
-
-- Windows : `%LOCALAPPDATA%\LexicographeNgambay\`
-- macOS : `~/Library/Application Support/LexicographeNgambay/`
-- Linux : `$XDG_DATA_HOME/LexicographeNgambay/` ou `~/.local/share/LexicographeNgambay/`
-
-Au premier lancement, si aucune base n'existe déjà dans ce dossier, une ancienne base située à côté du logiciel y est copiée. La base d'origine est conservée. Les fichiers JSON sont lus à côté du script en développement et depuis le bundle PyInstaller en modes `--onefile` et `--onedir`.

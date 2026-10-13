@@ -1,84 +1,55 @@
-COMMENT TRANSFORMER CE LOGICIEL EN .EXE WINDOWS
-=================================================
+COMMENT CRÉER LE FICHIER .EXE WINDOWS DE GERRO LEXICOGRAPHE
+==============================================================
 
-Ce dossier contient un vrai logiciel de bureau (fenêtre native, pas une
-page web). Pour l'utiliser tout de suite, tu n'as même pas besoin du
-.exe : voir "UTILISATION IMMÉDIATE" ci-dessous.
-
-Pour obtenir un fichier .exe autonome (double-clic, sans avoir Python
-installé), suis ces 4 étapes SUR UN ORDINATEUR WINDOWS :
+Le logiciel peut être utilisé directement avec Python (voir README.md).
+Pour obtenir un fichier .exe autonome (double-clic, sans Python installé),
+suis ces étapes SUR UN ORDINATEUR WINDOWS.
 
 
-ÉTAPE 1 — Installer Python (si pas déjà fait)
------------------------------------------------
-Télécharge et installe Python depuis https://python.org
+ÉTAPE 1 — Installer Python
+---------------------------
+Télécharge et installe Python 3.10 ou plus récent depuis https://python.org
 Pendant l'installation, coche la case "Add Python to PATH".
 
 
-ÉTAPE 2 — Ouvrir une invite de commande dans ce dossier
-----------------------------------------------------------
-Dans l'explorateur de fichiers, ouvre le dossier où se trouvent
-app.py, ngambay_verses.json et french_verses.json.
+ÉTAPE 2 — Ouvrir une invite de commande dans le dossier du projet
+-------------------------------------------------------------------
+Dans l'explorateur de fichiers, ouvre le dossier qui contient app.py.
 Clique dans la barre d'adresse, tape "cmd" et appuie sur Entrée.
 
 
-ÉTAPE 3 — Installer PyInstaller
-----------------------------------
-Dans la fenêtre noire qui s'est ouverte, tape :
-
-    pip install pyinstaller
-
-Attends que ça se termine (quelques secondes à 1-2 minutes).
+ÉTAPE 3 — Préparer l'environnement
+------------------------------------
+    python -m venv .venv
+    .venv\Scripts\activate
+    pip install -r requirements.txt pyinstaller
 
 
 ÉTAPE 4 — Générer le .exe
------------------------------
-Toujours dans la même fenêtre, tape :
+---------------------------
+    pyinstaller --noconfirm --onefile --windowed --name GerroLexicographe --add-data "lexicographe\ressources;lexicographe\ressources" app.py
 
-    pyinstaller --onefile --windowed --name LexicographeNgambay --add-data "ngambay_verses.json;." --add-data "french_verses.json;." app.py
+Attends la fin (quelques minutes). Le fichier est créé dans le dossier
+"dist" :
 
-Attends la fin (1 à 3 minutes). Un dossier "dist" apparaît, et dedans :
+    dist\GerroLexicographe.exe
 
-    LexicographeNgambay.exe
-
-Les fichiers JSON sont inclus dans l'application et lus depuis le dossier
-interne du bundle PyInstaller (--onefile ou --onedir). Ne les deplace pas
-dans le dossier de donnees utilisateur.
-
-C'est ton logiciel autonome. Tu peux le copier n'importe où sur ton
-PC, le mettre sur le bureau, en faire un raccourci — il n'a plus
-besoin de Python installé pour fonctionner.
-
-IMPORTANT : la première fois que tu lances le .exe, Windows peut
-afficher un avertissement "Windows a protégé votre ordinateur" parce
-que le fichier n'est pas signé numériquement (ça coûte cher et n'est
-pas nécessaire pour un usage personnel). Clique sur "Informations
-complémentaires" puis "Exécuter quand même".
-
-
-UTILISATION IMMÉDIATE (sans passer par le .exe)
-===================================================
-Si tu as Python installé, tu peux lancer le logiciel directement,
-sans passer par les 4 étapes ci-dessus :
-
-    1. Ouvre une invite de commande dans ce dossier
-    2. Tape : python app.py
-
-La fenêtre du logiciel s'ouvre immédiatement. C'est exactement le
-même logiciel — juste sans l'étape de compilation en .exe.
+Le corpus d'exemple est inclus dans le .exe. Tu peux copier le .exe
+n'importe où et en faire un raccourci.
 
 
 DONNÉES ET SAUVEGARDE
-========================
-Toutes tes validations et les phrases que tu ajoutes sont sauvegardées
-automatiquement dans le fichier "lexique_ngambay.db" du dossier de donnees utilisateur, meme si le logiciel est installe dans un dossier protege. Les chemins detailles et la migration de l ancienne base sont indiques ci-dessous. Sauvegarde regulierement ce fichier pour eviter de perdre ton travail.
+======================
+Les projets ne sont pas stockés à côté du .exe mais dans le dossier de
+l'utilisateur, même si le logiciel est installé dans un dossier protégé :
 
-## Stockage persistant des données
+    %LOCALAPPDATA%\GerroLexicographe\Projets\       les projets (.lexique)
+    %LOCALAPPDATA%\GerroLexicographe\Sauvegardes\   copies automatiques
 
-La base `lexique_ngambay.db` et les fichiers audio sont conservés dans un dossier utilisateur accessible, meme si l'application est installée dans un dossier protégé :
+Chaque projet tient dans un seul fichier .lexique : le copier suffit pour
+le sauvegarder ou le transmettre. Le menu Fichier > "Enregistrer une copie
+du projet" fait une copie cohérente même pendant le travail.
 
-- Windows : `%LOCALAPPDATA%\LexicographeNgambay\`
-- macOS : `~/Library/Application Support/LexicographeNgambay/`
-- Linux : `$XDG_DATA_HOME/LexicographeNgambay/` ou `~/.local/share/LexicographeNgambay/`
-
-Au premier lancement, si aucune base n'existe déjà dans ce dossier, une ancienne base située a cote du logiciel y est copiee. La base d'origine est conservee. Les fichiers JSON sont lus a cote du script en développement et depuis le bundle PyInstaller en modes `--onefile` et `--onedir`.
+Une base de l'ancienne version (lexique_ngambay.db) trouvée dans
+%LOCALAPPDATA%\LexicographeNgambay\ ou à côté du logiciel est proposée à
+la conversion au premier lancement. La base d'origine n'est pas modifiée.
