@@ -1,9 +1,9 @@
 """Fenêtre principale : navigation à gauche, pages à droite."""
 
 
-from PySide6.QtCore import Qt, QUrl, Signal
+from PySide6.QtCore import QSize, Qt, QUrl, Signal
 from PySide6.QtGui import QAction, QDesktopServices, QKeySequence
-from PySide6.QtWidgets import (QFileDialog, QHBoxLayout, QListWidget, QMainWindow, QMessageBox, QStackedWidget,
+from PySide6.QtWidgets import (QFileDialog, QHBoxLayout, QListWidget, QListWidgetItem, QMainWindow, QMessageBox, QStackedWidget,
                                QWidget)
 
 from .. import APP_NAME, __version__, alignement
@@ -67,7 +67,11 @@ class FenetrePrincipale(QMainWindow):
             ("Exports", PageExports(projet)),
         ]
         for nom, page in self.pages:
-            self.navigation.addItem(nom)
+            item = QListWidgetItem(nom)
+            # hauteur fixée ici plutôt que par une marge du style : avec le zoom d'affichage de Windows,
+            # la marge du style agrandit le fond du survol sans agrandir la ligne, qui déborde alors
+            item.setSizeHint(QSize(0, self.navigation.fontMetrics().height() + 18))
+            self.navigation.addItem(item)
             self.pile.addWidget(page)
             page.donnees_modifiees.connect(self.rafraichir_tout)
         for _, page in self.pages:
