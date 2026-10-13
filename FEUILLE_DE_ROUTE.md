@@ -31,6 +31,8 @@ justifiées et jamais appliquées sans décision humaine.
 - [x] Enregistrements audio et images liés aux entrées (écoute intégrée)
 - [x] Homographes numérotés, filtres (statut, catégorie, domaine), modification en masse
 - [x] Import LIFT (FLEx, WeSay) : mise à jour par identifiant, rapport détaillé, rien n'est perdu
+- [x] Import direct des projets FLEx de l'ordinateur (.fwdata, lecture seule) : lexique complet, textes
+      et analyses interlinéaires ; testé sur trois projets réels (jusqu'à 8 580 entrées)
 - [x] Export LIFT enrichi (citation, prononciation, variantes, composants, domaines, index inverse)
 - [x] Ordre alphabétique déclaré (multigraphes, tons au niveau secondaire) et police de la langue
 - [ ] Traits grammaticaux structurés (système de traits déclaré, au lieu de propriétés libres)

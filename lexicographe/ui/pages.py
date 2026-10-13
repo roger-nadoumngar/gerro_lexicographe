@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QFileDialog, QFormLayout, QGridLayout, QHBoxLayout,
+from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QFileDialog, QFormLayout, QGridLayout, QHBoxLayout, QMenu,
                                QHeaderView, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QPlainTextEdit, QPushButton, QSplitter, QTableWidget, QTableWidgetItem,
                                QTextBrowser, QVBoxLayout, QWidget, QDialog, QDialogButtonBox)
@@ -352,9 +352,11 @@ class PageLexique(Page):
         nouvelle.clicked.connect(self._nouvelle)
         self.btn_masse = QPushButton("Modifier la sélection…")
         self.btn_masse.clicked.connect(self._modifier_en_masse)
-        importer = QPushButton("Importer LIFT…")
-        importer.setToolTip("Reprendre un lexique FLEx ou WeSay (fichier .lift)")
-        importer.clicked.connect(self._importer_lift)
+        importer = QPushButton("Importer ▾")
+        menu_import = QMenu(importer)
+        menu_import.addAction("Depuis un projet FLEx…", self._importer_flex)
+        menu_import.addAction("Depuis un fichier LIFT (FLEx, WeSay)…", self._importer_lift)
+        importer.setMenu(menu_import)
         bas.addWidget(nouvelle)
         bas.addWidget(self.btn_masse)
         bas.addWidget(importer)
@@ -459,6 +461,23 @@ class PageLexique(Page):
         lexique.modifier_en_masse(self.projet.conn, ids, statut=d.statut.currentData(),
                                   categorie_id=d.categorie.currentData(), ajouter_domaine=d.domaine)
         self.donnees_modifiees.emit()
+
+    def _importer_flex(self):
+        from .. import flex_import
+        from .dialogues import DialogueFlex
+        d = DialogueFlex(self, "Importer depuis un projet FLEx")
+        if not d.exec() or not d.chemin:
+            return
+        try:
+            self.projet.sauvegarde_automatique()
+            with CurseurAttente():
+                rapport = flex_import.importer(self.projet, d.chemin, d.statut_choisi, d.textes_choisis)
+        except Exception as e:
+            erreur(self, "Import FLEx", "Le projet FLEx n'a pas pu être importé. Le projet actuel a été "
+                                        "sauvegardé juste avant (menu Fichier > Ouvrir le dossier des sauvegardes).", e)
+            return
+        self.donnees_modifiees.emit()
+        info(self, "Import FLEx", rapport.resume())
 
     def _importer_lift(self):
         chemin, _ = QFileDialog.getOpenFileName(self, "Importer un lexique LIFT", "", "LIFT (*.lift)")

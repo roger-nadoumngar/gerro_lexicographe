@@ -3,7 +3,7 @@
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFileDialog, QFontComboBox, QFormLayout,
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFileDialog, QFontComboBox, QFormLayout,
                                QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QPlainTextEdit, QPushButton, QSpinBox, QTabWidget, QVBoxLayout, QWidget)
 
@@ -63,9 +63,77 @@ class DialogueNouveauProjet(QDialog):
         return valeurs
 
 
+class DialogueFlex(QDialog):
+    """Choix d'un projet FLEx à importer. Après acceptation : `chemin`, `statut`, `avec_textes`."""
+
+    def __init__(self, parent=None, titre_fenetre="Importer un projet FLEx"):
+        super().__init__(parent)
+        from datetime import datetime
+        from .. import flex_import
+        self.setWindowTitle(titre_fenetre)
+        self.setMinimumSize(620, 440)
+        self.chemin = None
+        v = QVBoxLayout(self)
+        dossier = flex_import.dossier_projets_flex()
+        aide = QLabel(f"Projets FLEx trouvés dans <b>{dossier}</b>. Le projet FLEx est seulement lu : "
+                      "il n'est jamais modifié. Réimporter le même projet met à jour au lieu de dupliquer.")
+        aide.setWordWrap(True)
+        v.addWidget(aide)
+        self.liste = QListWidget()
+        self.liste.itemDoubleClicked.connect(lambda _: self._accepter())
+        for p in flex_import.lister_projets_flex(dossier):
+            date = datetime.fromtimestamp(p.modifie).strftime("%d/%m/%Y")
+            texte = f"{p.nom}    ({p.taille // 1_000_000} Mo, modifié le {date})"
+            if p.ouvert_dans_flex:
+                texte += "   — ouvert dans FLEx : ferme FLEx pour importer la dernière version"
+            item = QListWidgetItem(texte)
+            item.setData(Qt.UserRole, p.chemin)
+            self.liste.addItem(item)
+        if self.liste.count():
+            self.liste.setCurrentRow(0)
+        else:
+            self.liste.addItem(QListWidgetItem("Aucun projet FLEx trouvé : utilise « Autre fichier… »."))
+        v.addWidget(self.liste, 1)
+        autre = QPushButton("Autre fichier .fwdata…")
+        autre.clicked.connect(self._autre)
+        v.addWidget(autre, 0, Qt.AlignLeft)
+        form = QFormLayout()
+        self.statut = QComboBox()
+        self.statut.addItems(lexique.STATUTS)
+        self.statut.setCurrentText("à vérifier")
+        self.avec_textes = QCheckBox("Importer aussi les textes et leurs analyses interlinéaires")
+        self.avec_textes.setChecked(True)
+        form.addRow("Statut des entrées importées :", self.statut)
+        form.addRow(self.avec_textes)
+        v.addLayout(form)
+        boutons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        boutons.button(QDialogButtonBox.Ok).setText("Importer")
+        boutons.accepted.connect(self._accepter)
+        boutons.rejected.connect(self.reject)
+        v.addWidget(boutons)
+
+    def _autre(self):
+        chemin, _ = QFileDialog.getOpenFileName(self, "Projet FLEx", "", "Projet FLEx (*.fwdata)")
+        if chemin:
+            self.chemin = chemin
+            self._fermer()
+
+    def _accepter(self):
+        item = self.liste.currentItem()
+        if item and item.data(Qt.UserRole):
+            self.chemin = item.data(Qt.UserRole)
+            self._fermer()
+
+    def _fermer(self):
+        self.statut_choisi = self.statut.currentText()
+        self.textes_choisis = self.avec_textes.isChecked()
+        self.accept()
+
+
 class DialogueProjets(QDialog):
     """Choix du projet à ouvrir. Après exec(), `action` vaut ('ouvrir', chemin),
-    ('creer', réglages), ou ('importer_v01', chemin_ancienne_base)."""
+    ('creer', réglages), ('importer_v01', chemin_ancienne_base) ou
+    ('importer_flex', (chemin .fwdata, statut, avec_textes))."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -81,6 +149,7 @@ class DialogueProjets(QDialog):
         v.addWidget(self.liste, 1)
         ligne = QHBoxLayout()
         for texte, action, principal in [("Ouvrir", self._ouvrir, True), ("Nouveau projet…", self._nouveau, False),
+                                         ("Importer un projet FLEx…", self._flex, False),
                                          ("Ouvrir un fichier…", self._fichier, False),
                                          ("Importer une base v0.1…", self._importer, False)]:
             b = QPushButton(texte)
@@ -117,6 +186,12 @@ class DialogueProjets(QDialog):
         chemin, _ = QFileDialog.getOpenFileName(self, "Ouvrir un projet", "", f"Projet (*{EXTENSION})")
         if chemin:
             self.action = ("ouvrir", chemin)
+            self.accept()
+
+    def _flex(self):
+        d = DialogueFlex(self)
+        if d.exec() and d.chemin:
+            self.action = ("importer_flex", (d.chemin, d.statut_choisi, d.textes_choisis))
             self.accept()
 
     def _importer(self):

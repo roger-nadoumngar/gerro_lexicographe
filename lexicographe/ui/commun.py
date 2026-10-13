@@ -48,6 +48,11 @@ POLICES_PREFEREES = ["Charis SIL", "Andika", "Gentium Plus", "Doulos SIL", "Sego
 
 
 def appliquer_style(app: QApplication):
+    # boutons standard de Qt en français (Annuler, Oui, Non…), traduction fournie avec PySide6
+    from PySide6.QtCore import QLibraryInfo, QTranslator
+    traducteur = QTranslator(app)
+    if traducteur.load("qtbase_fr", QLibraryInfo.path(QLibraryInfo.TranslationsPath)):
+        app.installTranslator(traducteur)
     app.setStyle("Fusion")
     app.setStyleSheet(FEUILLE_DE_STYLE)
     familles = set(QFontDatabase.families())

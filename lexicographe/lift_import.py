@@ -79,6 +79,11 @@ def _langue_dominante(racine, chemin_balise, prefere):
 
 def importer(projet, chemin):
     """Importe un fichier LIFT dans le projet. Retourne un Rapport."""
+    with projet.en_lot():
+        return _importer(projet, chemin)
+
+
+def _importer(projet, chemin):
     conn = projet.conn
     racine = ET.parse(chemin).getroot()
     if racine.tag != "lift":

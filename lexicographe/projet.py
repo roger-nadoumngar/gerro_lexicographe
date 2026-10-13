@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime
 
 from . import base
@@ -81,6 +82,19 @@ class Projet:
 
     def fermer(self):
         self.conn.close()
+
+    @contextmanager
+    def en_lot(self):
+        """Opérations en masse (imports) : le disque n'est pas forcé à chaque validation,
+        ce qui les rend des dizaines de fois plus rapides. Une sauvegarde doit être faite
+        avant : en cas de coupure de courant pendant l'import, on repart de cette sauvegarde."""
+        ancien = self.conn.execute("PRAGMA synchronous").fetchone()[0]
+        self.conn.execute("PRAGMA synchronous = OFF")
+        try:
+            yield
+        finally:
+            self.conn.commit()
+            self.conn.execute(f"PRAGMA synchronous = {int(ancien)}")
 
     # -- réglages ----------------------------------------------------------------
     @property

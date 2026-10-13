@@ -40,7 +40,12 @@ Sous macOS ou Linux, l'activation de l'environnement est `source .venv/bin/activ
 ## Utilisation
 
 Au premier lancement, choisis ou crée un **projet** : un projet documente une
-langue et tient dans un seul fichier `.lexique`. Une base de la version 0.1
+langue et tient dans un seul fichier `.lexique`. **« Importer un projet FLEx… »**
+liste les projets FLEx de l'ordinateur (dossier `C:\ProgramData\SIL\FieldWorks\Projects`)
+et en crée un projet complet : lexique (sens, catégories, domaines, exemples,
+variantes, formes complexes, relations, audio et images) et textes avec leurs
+analyses interlinéaires. Le projet FLEx est seulement lu, jamais modifié ;
+réimporter le même projet met à jour au lieu de dupliquer. Une base de la version 0.1
 (`lexique_ngambay.db`) est détectée et convertie automatiquement en projet,
 sans modifier l'original.
 
@@ -97,6 +102,7 @@ lexicographe/
   lexique.py                entrées, sens, variantes, composants, relations, catégories, index inverse
   domaines.py               domaines sémantiques (lecture des listes FLEx)
   lift_import.py            import LIFT (FLEx, WeSay)
+  flex_import.py            import direct d'un projet FLEx (.fwdata), en lecture seule
   textes.py                 textes du corpus, métadonnées, import de textes de terrain
   morphologie.py            analyseur morphologique à règles déclarées
   interlineaire.py          analyses validées, interlinéaire, inventaire, concordance

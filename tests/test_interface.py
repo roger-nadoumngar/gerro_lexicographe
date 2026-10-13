@@ -360,3 +360,29 @@ def test_formes_ajout_au_lexique_avec_exemple(fenetre, messages):
     eid = f._ajouter_au_lexique()
     e = lexique.lire_entree(fenetre.projet.conn, eid)
     assert e.forme == forme and e.statut == "brouillon" and e.sens[0].exemples[0].reference
+
+
+# -- import FLEx ---------------------------------------------------------------------------------
+
+def test_import_projet_flex_depuis_l_accueil(app, tmp_path, messages, monkeypatch):
+    from lexicographe import flex_import
+    from lexicographe.ui import application, dialogues
+    from tests.test_flex import FWDATA
+    dossier = tmp_path / "Projects" / "demo"
+    dossier.mkdir(parents=True)
+    (dossier / "demo.fwdata").write_text(FWDATA, encoding="utf-8")
+    monkeypatch.setattr("lexicographe.chemins.dossier_donnees", lambda *a: str(tmp_path / "donnees"))
+    monkeypatch.setattr(flex_import, "dossier_projets_flex", lambda: str(tmp_path / "Projects"))
+
+    d = dialogues.DialogueFlex()
+    assert d.liste.count() == 1 and "demo" in d.liste.item(0).text()
+    d._accepter()
+    assert d.chemin.endswith("demo.fwdata") and d.statut_choisi == "à vérifier" and d.textes_choisis
+
+    projet = application.importer_projet_flex(d.chemin, d.statut_choisi, d.textes_choisis)
+    try:
+        assert projet.nom == "demo" and projet.reglage("langue_vern_code") == "sba"
+        assert len(lexique.lister_entrees(projet.conn)) == 4
+        assert any(m[0] == "info" and "4 entrée(s) créée(s)" in m[2] for m in messages)
+    finally:
+        projet.fermer()

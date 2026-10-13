@@ -87,17 +87,25 @@ def analyses_de(conn, forme, _cache=None):
     return resultat
 
 
-def valider(conn, analyse: Analyse):
+def reconstitue(analyse: Analyse):
+    """True si les morphèmes, mis bout à bout, redonnent le mot."""
+    bout_a_bout = "".join(normaliser(m.forme).lower() for m in analyse.morphemes)
+    forme = normaliser(analyse.forme).lower()
+    return bout_a_bout in (forme, forme.replace("-", ""))
+
+
+def valider(conn, analyse: Analyse, cache_gloses=None, formes_sous_jacentes=False):
     """Enregistre l'analyse d'une forme (réutilise une analyse identique existante).
-    Retourne son id."""
+    Retourne son id. Par défaut les morphèmes doivent reconstituer le mot ;
+    `formes_sous_jacentes` accepte des morphèmes notés sous leur forme de base
+    (« buk-o » pour « buki »), comme le permet FLEx."""
     forme = normaliser(analyse.forme).lower()
     if not analyse.morphemes:
         raise ValueError("Une analyse contient au moins un morphème.")
-    if "".join(normaliser(m.forme).lower() for m in analyse.morphemes) != forme.replace("-", "") \
-            and "".join(normaliser(m.forme).lower() for m in analyse.morphemes) != forme:
+    if not formes_sous_jacentes and not reconstitue(analyse):
         raise ValueError(f"Les morphèmes « {analyse.segmentation} » ne reconstituent pas le mot « {forme} ».")
     signature = [(normaliser(m.forme).lower(), m.entree_id, m.sens_id) for m in analyse.morphemes]
-    for existante in analyses_de(conn, forme):
+    for existante in analyses_de(conn, forme, cache_gloses):
         if [(m.forme, m.entree_id, m.sens_id) for m in existante.morphemes] == signature:
             if analyse.glose_mot and analyse.glose_mot != existante.glose_mot:
                 with conn:

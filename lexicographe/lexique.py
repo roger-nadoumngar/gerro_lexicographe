@@ -18,7 +18,7 @@ from .texte import OrdreAlphabetique, normaliser
 
 TYPES_RELATIONS = [
     "synonyme", "antonyme", "terme générique (hyperonyme)", "terme spécifique (hyponyme)",
-    "partie de (méronyme)", "même champ lexical", "voir aussi",
+    "partie de (méronyme)", "même champ lexical", "voir aussi", "variante de",
 ]
 
 # types morphologiques : clé = nom FLEx (exports LIFT), valeur = libellé affiché

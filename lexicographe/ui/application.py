@@ -40,6 +40,32 @@ def ouvrir_projet(chemin):
     return projet
 
 
+def importer_projet_flex(chemin_flex, statut="à vérifier", avec_textes=True):
+    """Crée un projet à partir d'un projet FLEx (lu, jamais modifié) et l'ouvre."""
+    from PySide6.QtWidgets import QProgressDialog
+    from .. import flex_import
+    from .commun import info
+    nom = os.path.splitext(os.path.basename(chemin_flex))[0]
+    attente = QProgressDialog(f"Import du projet FLEx « {nom} »… Cela peut prendre une demi-minute.", None, 0, 0)
+    attente.setWindowTitle(APP_NAME)
+    attente.setMinimumDuration(0)
+    attente.show()
+    QApplication.processEvents()
+    try:
+        with CurseurAttente():
+            vern, analyse = flex_import.langues(chemin_flex)
+            projet = Projet.creer(chemin_nouveau_projet(nom), nom=nom, langue_vern_code=vern, langue_vern_nom=vern,
+                                  langue_analyse_code=analyse,
+                                  langue_analyse_nom={"fr": "français", "en": "anglais"}.get(analyse, analyse))
+            domaines.charger_depuis_flex(projet.conn, analyse)
+            rapport = flex_import.importer(projet, chemin_flex, statut, avec_textes)
+            projet.fermer()
+    finally:
+        attente.close()
+    info(None, "Import FLEx", rapport.resume())
+    return ouvrir_projet(projet.chemin)
+
+
 def _executer_action(action):
     genre, valeur = action
     if genre == "ouvrir":
@@ -48,6 +74,8 @@ def _executer_action(action):
         projet = Projet.creer(chemin_nouveau_projet(valeur["nom"]), **valeur)
         projet.fermer()
         return ouvrir_projet(projet.chemin)
+    if genre == "importer_flex":
+        return importer_projet_flex(*valeur)
     if genre == "importer_v01":
         projet = Projet.importer_v01(valeur, chemin_nouveau_projet("Ngambay"))
         projet.fermer()
