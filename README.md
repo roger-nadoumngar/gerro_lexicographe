@@ -40,8 +40,17 @@ cd gerro_lexicographe
 python app.py
 ```
 
-Bibliothèques optionnelles : `pip install pylexique` (suggestion
-grammaticale), `python-docx` (import Word), `pypdf` (import PDF).
+Bibliothèques optionnelles : `pylexique` (suggestion grammaticale),
+`python-docx` (import Word), `pypdf` (import PDF).
+
+```bash
+pip install pylexique "setuptools<81" python-docx pypdf
+```
+
+`pylexique` dépend encore de `pkg_resources`, retiré de `setuptools` à
+partir de la version 81 : sans la contrainte `"setuptools<81"`, il
+s'installe mais ne se charge pas, et la suggestion grammaticale reste
+désactivée.
 
 ## Structure du projet
 

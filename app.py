@@ -1097,7 +1097,7 @@ class LexicographeApp:
         catégorie/genre/nombre — exactement le mécanisme 'Kagə = arbre -> nom, masculin'."""
         if not HAS_LEXIQUE_FR:
             self.suggestion_note.config(
-                text="Suggestion indisponible : bibliothèque 'pylexique' non installée (pip install pylexique).")
+                text="Suggestion indisponible : bibliothèque 'pylexique' non installée (pip install pylexique setuptools<81).")
             return
         fr_word = self.review_fr_entry.get().strip()
         suggestion = suggest_grammar_fr(fr_word)
