@@ -162,6 +162,12 @@ def test_usx():
     assert versets == {"RUT 1:1": "Du temps des juges.", "RUT 1:2": "Le nom."}
 
 
+def test_marqueurs_de_mots_et_apostrophes():
+    from lexicographe import usfm
+    versets, _ = usfm.analyser_usfm('\\id JOB\n\\c 1\n\\p\n\\v 1 \\w Il|strong="H1"\\w* était dans le pays d’\\w Uts|strong="H5780"\\w* \\+w qu’\\+w*\\w il\\w*.\n')
+    assert versets == {"JOB 1:1": "Il était dans le pays d’Uts qu’il."}
+
+
 def test_bible_complete_en_archive(projet, tmp_path):
     import zipfile
     from lexicographe import usfm

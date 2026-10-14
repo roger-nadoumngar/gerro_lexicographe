@@ -87,7 +87,8 @@ def nettoyer(texte):
     texte = re.sub(r"\\fe .*?\\fe\*", "", texte)
     texte = re.sub(r"\\fig .*?\\fig\*", "", texte)
     texte = re.sub(r"\|[^\\]*?(?=\\\+?[a-z]+\d?\*)", "", texte)   # attributs : \w mot|lemma="…"\w*
-    texte = re.sub(r"\\\+?[a-z]+\d?\*?", "", texte)
+    # l'espace qui suit un marqueur ouvrant lui appartient : « d’\w Uts\w* » donne « d’Uts »
+    texte = re.sub(r"\\\+?[a-z]+\d?(?:\*| ?)", "", texte)
     texte = re.sub(r"\s+", " ", texte).strip()
     return normaliser(texte)
 
