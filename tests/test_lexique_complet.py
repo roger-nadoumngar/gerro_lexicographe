@@ -281,3 +281,18 @@ def test_import_lexique_wesay_reel(tmp_path):
     assert p.conn.execute("SELECT COUNT(*) FROM entrees WHERE prononciation IS NOT NULL").fetchone()[0] > 1000
     assert p.conn.execute("SELECT COUNT(*) FROM composants").fetchone()[0] > 500
     p.fermer()
+
+
+# -- traits grammaticaux déclarés --------------------------------------------------------------
+
+def test_traits_declares(projet):
+    from lexicographe import traits
+    t = traits.enregistrer(projet, {"classe nominale": ["1", "2", "2", " "], " ton ": ["H", "B"]})
+    assert t == {"classe nominale": ["1", "2"], "ton": ["H", "B"]}
+    assert traits.lire(projet) == t
+    assert traits.verifier(t, {"ton": "H", "emprunt": "arabe"}) == [], "propriété non déclarée : libre"
+    (message,) = traits.verifier(t, {"ton": "M"})
+    assert "« M »" in message and "H, B" in message
+    lexique.enregistrer_entree(projet.conn, Entree(forme="a", proprietes={"ton": "H"}))
+    lexique.enregistrer_entree(projet.conn, Entree(forme="b", proprietes={"ton": "H"}))
+    assert traits.utilisations(projet.conn, "ton") == {"H": 2}

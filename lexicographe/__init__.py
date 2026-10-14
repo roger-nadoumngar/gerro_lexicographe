@@ -14,6 +14,7 @@ Organisation du paquet :
     publication  dictionnaire PDF / Word, livret, Bloom, Dictionary App Builder
     collecte     collecte par domaine et tâches de complément (inspiré de WeSay)
     fusion       fusion du travail d'un autre poste
+    traits       traits grammaticaux déclarés
     textes       textes du corpus et leurs métadonnées
     morphologie  analyseur morphologique à règles déclarées
     interlineaire analyses, interlinéaire, inventaire des formes, concordance
@@ -26,4 +27,4 @@ Organisation du paquet :
 
 APP_NAME = "Gerro Lexicographe"
 APP_ID = "GerroLexicographe"
-__version__ = "1.0.0"
+__version__ = "1.1.0"

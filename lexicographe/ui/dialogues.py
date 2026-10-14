@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, 
                                QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QPlainTextEdit, QPushButton, QSpinBox, QTabWidget, QVBoxLayout, QWidget)
 
-from .. import APP_NAME, lexique
+from .. import APP_NAME, lexique, traits
 from ..chemins import anciennes_bases
 from ..projet import EXTENSION, lister_projets
 from .commun import confirmer, erreur, titre
@@ -318,12 +318,87 @@ class DialogueReglages(QDialog):
         cl.addStretch()
         cv.addLayout(cl)
         onglets.addTab(cats, "Catégories")
+
+        onglet_traits = QWidget()
+        tv = QVBoxLayout(onglet_traits)
+        aide_traits = QLabel("Traits grammaticaux de la langue (classe nominale, ton, transitivité…) et leurs "
+                             "valeurs permises. Dans la fiche d'une entrée, ils sont proposés en listes, et une "
+                             "valeur non déclarée est refusée. Les propriétés non déclarées restent libres.")
+        aide_traits.setWordWrap(True)
+        aide_traits.setObjectName("sousTitre")
+        tv.addWidget(aide_traits)
+        self.traits = traits.lire(projet)
+        self.liste_traits = QListWidget()
+        tv.addWidget(self.liste_traits)
+        tl = QHBoxLayout()
+        for texte, action in [("Ajouter…", self._ajouter_trait), ("Modifier…", self._modifier_trait),
+                              ("Supprimer", self._supprimer_trait)]:
+            b = QPushButton(texte)
+            b.clicked.connect(action)
+            tl.addWidget(b)
+        tl.addStretch()
+        tv.addLayout(tl)
+        onglets.addTab(onglet_traits, "Traits")
+        self._remplir_traits()
         self._remplir_categories()
 
         boutons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         boutons.accepted.connect(self._accepter)
         boutons.rejected.connect(self.reject)
         v.addWidget(boutons)
+
+    def _remplir_traits(self):
+        self.liste_traits.clear()
+        for nom, valeurs in self.traits.items():
+            item = QListWidgetItem(f"{nom} : {', '.join(valeurs) if valeurs else '(valeurs libres)'}")
+            item.setData(Qt.UserRole, nom)
+            self.liste_traits.addItem(item)
+
+    def _demander_trait(self, nom="", valeurs=()):
+        nom, ok = QInputDialog.getText(self, "Trait grammatical", "Nom du trait (ex. : classe nominale) :", text=nom)
+        if not ok or not nom.strip():
+            return None
+        texte, ok = QInputDialog.getText(self, "Trait grammatical",
+                                         "Valeurs permises, séparées par des virgules (ex. : 1, 2, 3) :",
+                                         text=", ".join(valeurs))
+        if not ok:
+            return None
+        return nom.strip(), [v.strip() for v in texte.split(",") if v.strip()]
+
+    def _ajouter_trait(self):
+        r = self._demander_trait()
+        if r:
+            self.traits[r[0]] = r[1]
+            self._remplir_traits()
+
+    def _modifier_trait(self):
+        item = self.liste_traits.currentItem()
+        if not item:
+            return
+        ancien = item.data(Qt.UserRole)
+        r = self._demander_trait(ancien, self.traits[ancien])
+        if r:
+            utilisees = set(traits.utilisations(self.projet.conn, ancien)) - set(r[1])
+            if utilisees and r[1] and not confirmer(
+                    self, "Trait grammatical", f"Des entrées utilisent encore : {', '.join(sorted(utilisees))}.\n"
+                                               "Ces valeurs ne seront plus permises. Continuer ?"):
+                return
+            self.traits = {(r[0] if k == ancien else k): (r[1] if k == ancien else v) for k, v in self.traits.items()}
+            if r[0] != ancien:
+                with self.projet.conn:
+                    self.projet.conn.execute("UPDATE proprietes SET nom=? WHERE nom=?", (r[0], ancien))
+            self._remplir_traits()
+
+    def _supprimer_trait(self):
+        item = self.liste_traits.currentItem()
+        if item:
+            nom = item.data(Qt.UserRole)
+            n = sum(traits.utilisations(self.projet.conn, nom).values())
+            if confirmer(self, "Supprimer", f"Ne plus déclarer le trait « {nom} » ?"
+                                            + (f"\nLes {n} entrée(s) qui l'utilisent le gardent comme propriété libre."
+                                               if n else "")):
+                del self.traits[nom]
+                self._remplir_traits()
 
     def _remplir_categories(self):
         self.categories.clear()
@@ -423,4 +498,5 @@ class DialogueReglages(QDialog):
         avant = self.projet.reglages
         self.decoupage_modifie = any(avant.get(k) != valeurs[k] for k in self.CLES_DECOUPAGE)
         self.projet.definir_reglages(valeurs)
+        traits.enregistrer(self.projet, self.traits)
         self.accept()

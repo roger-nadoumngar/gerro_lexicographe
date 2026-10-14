@@ -585,3 +585,23 @@ def test_fusion_depuis_les_imports(fenetre, tmp_path, monkeypatch, messages):
     fenetre._fusionner()
     assert lexique.chercher_par_forme(fenetre.projet.conn, "motdeposte2")
     assert any(m[0] == "info" and "1 entrée(s) ajoutée(s)" in m[2] for m in messages)
+
+
+def test_traits_dans_la_fiche(fenetre, messages):
+    from lexicographe import traits
+    traits.enregistrer(fenetre.projet, {"ton": ["H", "B"]})
+    lex = aller(fenetre, "Lexique")
+    lex._nouvelle()
+    ed = lex.editeur
+    ed.forme.setText("kó")
+    ed.onglets.widget(0).glose.setText("arbre")
+    ed._ajouter_propriete()
+    nom, valeur = ed.proprietes.cellWidget(0, 0), ed.proprietes.cellWidget(0, 1)
+    assert [nom.itemText(i) for i in range(nom.count())] == ["", "ton"]
+    nom.setEditText("ton")
+    assert [valeur.itemText(i) for i in range(valeur.count())] == ["H", "B"], "valeurs du trait proposées"
+    valeur.setEditText("M")
+    assert ed.enregistrer() is None and any("« M »" in m[2] for m in messages), "valeur non déclarée refusée"
+    valeur.setEditText("H")
+    eid = ed.enregistrer()
+    assert lexique.lire_entree(fenetre.projet.conn, eid).proprietes == {"ton": "H"}

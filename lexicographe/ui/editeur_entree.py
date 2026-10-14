@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QComboBox, QCompleter, QFileDialog, QFormLayout, 
                                QPlainTextEdit, QPushButton, QScrollArea, QTableWidget, QTableWidgetItem,
                                QVBoxLayout, QWidget)
 
-from .. import domaines, lexique
+from .. import domaines, lexique, traits
 from ..lexique import Entree, Exemple, Sens, Variante
 from ..projet import copier_medias
 from .commun import confirmer, erreur
@@ -21,6 +21,9 @@ ROLE_DONNEE = Qt.UserRole
 
 
 def _texte(table, ligne, col):
+    widget = table.cellWidget(ligne, col)
+    if isinstance(widget, QComboBox):
+        return widget.currentText().strip()
     item = table.item(ligne, col)
     return item.text().strip() if item else ""
 
@@ -593,12 +596,34 @@ class EditeurEntree(QWidget):
             self._marquer()
 
     def _ajouter_propriete(self, nom="", valeur=""):
+        """Ligne de propriété : listes de choix des traits déclarés (modifiables pour une
+        propriété libre)."""
+        declares = traits.lire(self.projet)
         n = self.proprietes.rowCount()
         self.proprietes.insertRow(n)
-        self.proprietes.setItem(n, 0, QTableWidgetItem(nom))
-        self.proprietes.setItem(n, 1, QTableWidgetItem(valeur))
+        choix_nom, choix_valeur = QComboBox(), QComboBox()
+        for combo in (choix_nom, choix_valeur):
+            combo.setEditable(True)
+            combo.setInsertPolicy(QComboBox.NoInsert)
+        choix_nom.addItems([""] + list(declares))
+        choix_nom.setEditText(nom)
+
+        def valeurs_du_trait(texte):
+            courant = choix_valeur.currentText()
+            choix_valeur.blockSignals(True)
+            choix_valeur.clear()
+            choix_valeur.addItems(declares.get(texte.strip(), []))
+            choix_valeur.setEditText(courant)
+            choix_valeur.blockSignals(False)
+        valeurs_du_trait(nom)
+        choix_valeur.setEditText(valeur)
+        choix_nom.editTextChanged.connect(valeurs_du_trait)
+        choix_nom.editTextChanged.connect(self._marquer)
+        choix_valeur.editTextChanged.connect(self._marquer)
+        self.proprietes.setCellWidget(n, 0, choix_nom)
+        self.proprietes.setCellWidget(n, 1, choix_valeur)
         if not nom and not self.signalsBlocked():
-            self.proprietes.editItem(self.proprietes.item(n, 0))
+            choix_nom.setFocus()
 
     # -- état ----------------------------------------------------------------------
     def _marquer(self, *_):
@@ -647,6 +672,11 @@ class EditeurEntree(QWidget):
         entree = self.valeur()
         if not entree.forme:
             erreur(self, "Enregistrement", "La forme de l'entrée est vide.")
+            return None
+        problemes = traits.verifier(traits.lire(self.projet), entree.proprietes)
+        if problemes:
+            erreur(self, "Traits grammaticaux", "\n".join(problemes) +
+                   "\n\nChoisis une valeur de la liste, ou ajoute cette valeur au trait dans les réglages du projet.")
             return None
         try:
             eid = lexique.enregistrer_entree(self.projet.conn, entree)

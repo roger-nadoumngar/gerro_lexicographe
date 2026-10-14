@@ -68,8 +68,9 @@ sans modifier l'original.
 
 **Réglages du projet** (menu Fichier) : langues et codes ISO, règles de
 découpage en mots, mots vides de la langue d'analyse, seuil des
-contradictions, alphabet (ordre de tri) et police de la langue, catégories
-grammaticales hiérarchiques.
+contradictions, alphabet (ordre de tri) et police de la langue, classes de sons
+(environnements d'allomorphes), catégories grammaticales hiérarchiques, traits
+grammaticaux et leurs valeurs permises.
 
 **Domaines sémantiques** : la liste officielle de SIL est copiée dans le
 projet depuis l'installation de FLEx (fichiers `LocalizedLists-fr.zip` ou
@@ -112,6 +113,7 @@ lexicographe/
   publication.py            dictionnaire PDF / Word, livret de syllabaire, Bloom, Dictionary App Builder
   collecte.py               collecte par domaine et tâches de complément (inspiré de WeSay)
   fusion.py                 fusion du travail d'un autre poste
+  traits.py                 traits grammaticaux déclarés et leurs valeurs permises
   textes.py                 textes du corpus, métadonnées, import de textes de terrain
   morphologie.py            analyseur morphologique à règles déclarées
   interlineaire.py          analyses validées, interlinéaire, inventaire, concordance

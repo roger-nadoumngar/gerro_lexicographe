@@ -104,10 +104,18 @@ justifiées et jamais appliquées sans décision humaine.
       et images), la version modifiée le plus récemment l'emporte, phrases et textes ajoutés ; l'autre fichier
       n'est jamais modifié ; rapport détaillé
 
-## Après la version 1.0 — points restants
+## Version 1.1 ✅
 
-- Traits grammaticaux structurés ; claviers Keyman
-- Environnements d'allomorphes appliqués par l'analyseur ; infixes, redoublement ; export de l'interlinéaire
+- [x] Environnements d'allomorphes appliqués par l'analyseur (écriture « / N _ », « / _ # »…, classes de
+      sons déclarées dans les réglages) ; un environnement en texte libre est affiché mais jamais appliqué
+- [x] Export de l'interlinéaire d'un texte : texte aligné et Word
+- [x] Traits grammaticaux déclarés (classe nominale, ton…) avec valeurs permises : listes de choix dans la
+      fiche, valeur non déclarée refusée ; les propriétés non déclarées restent libres
+
+## Points restants
+
+- Claviers Keyman
+- Infixes, circonfixes, redoublement dans l'analyseur
 - Analyses du glossaire interlinéaire de Paratext reprises dans les textes
 - Export Webonary ; projet Dictionary App Builder complet
 - Liste des domaines sémantiques intégrée au logiciel (si la licence de SIL le permet)
