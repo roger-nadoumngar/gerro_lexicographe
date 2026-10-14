@@ -290,3 +290,106 @@ def concordance(projet, recherche, mode="mot", cote="vernaculaire", contexte=60,
             if len(resultat) >= limite:
                 return resultat
     return resultat
+
+
+# -- export de l'interlinéaire -------------------------------------------------------------------
+
+def _largeur(texte):
+    """Largeur affichée : les marques combinantes (tons…) n'occupent pas de colonne."""
+    import unicodedata
+    return sum(1 for c in texte if unicodedata.category(c)[0] != "M")
+
+
+def _bloc(mot):
+    """Lignes d'un mot : forme, morphèmes, gloses, glose du mot."""
+    a = mot.analyse
+    return [mot.texte,
+            a.segmentation if a else "",
+            a.gloses if a else "",
+            a.glose_mot if a and a.glose_mot else ""]
+
+
+def lignes_phrase(mots, largeur_max=100):
+    """Lignes alignées de l'interlinéaire d'une phrase, coupées à `largeur_max` colonnes."""
+    blocs = [_bloc(m) for m in mots]
+    sortie, debut = [], 0
+    while debut < len(blocs):
+        groupe, largeur = [], 0
+        for b in blocs[debut:]:
+            l = max(_largeur(x) for x in b) + 2
+            if groupe and largeur + l > largeur_max:
+                break
+            groupe.append((b, l))
+            largeur += l
+        debut += len(groupe)
+        for rang in range(4):
+            texte = "".join(b[rang] + " " * (l - _largeur(b[rang])) for b, l in groupe).rstrip()
+            if texte or rang == 0:
+                sortie.append(texte)
+        sortie.append("")
+    return sortie
+
+
+def phrases_du_texte(projet, code):
+    """[(ref, vernaculaire, analyse, traduction littérale, notes, mots)] d'un texte."""
+    from .textes import phrases as phrases_texte
+    ctx = Contexte(projet)
+    resultat = []
+    for ref, vern, analyse in phrases_texte(projet.conn, code):
+        litterale, notes = projet.conn.execute(
+            "SELECT traduction_litterale, notes FROM phrases WHERE ref=?", (ref,)).fetchone()
+        resultat.append((ref, vern or "", analyse or "", litterale or "", notes or "", phrase(projet, ref, vern, ctx)))
+    return resultat
+
+
+def exporter_texte_interlineaire(projet, code, titre, chemin):
+    """Texte en interlinéaire aligné (police à chasse fixe conseillée). Retourne le nombre de phrases."""
+    contenu = phrases_du_texte(projet, code)
+    with open(chemin, "w", encoding="utf-8") as f:
+        f.write(f"{titre}\n{'=' * _largeur(titre)}\n\n")
+        for ref, _, analyse, litterale, notes, mots in contenu:
+            f.write(f"[{ref}]\n")
+            f.write("\n".join(lignes_phrase(mots)) + "\n")
+            if analyse:
+                f.write(f"Traduction libre : {analyse}\n")
+            if litterale:
+                f.write(f"Traduction littérale : {litterale}\n")
+            if notes:
+                f.write(f"Notes : {notes}\n")
+            f.write("\n")
+    return len(contenu)
+
+
+def exporter_docx_interlineaire(projet, code, titre, chemin, mots_par_ligne=8):
+    """Interlinéaire en Word : un tableau sans bordure par groupe de mots (forme, morphèmes,
+    gloses, glose du mot), puis les traductions."""
+    from docx import Document
+    from docx.shared import Pt
+    doc = Document()
+    police = projet.reglage("police_vern") or "Charis SIL"
+    doc.styles["Normal"].font.name = police
+    doc.styles["Normal"].font.size = Pt(10)
+    doc.add_heading(titre, level=1)
+    contenu = phrases_du_texte(projet, code)
+    for ref, _, analyse, litterale, notes, mots in contenu:
+        p = doc.add_paragraph()
+        p.add_run(ref).bold = True
+        for debut in range(0, max(len(mots), 1), mots_par_ligne):
+            groupe = mots[debut:debut + mots_par_ligne]
+            if not groupe:
+                break
+            table = doc.add_table(rows=4, cols=len(groupe))
+            for c, mot in enumerate(groupe):
+                for r, valeur in enumerate(_bloc(mot)):
+                    cellule = table.cell(r, c).paragraphs[0]
+                    run = cellule.add_run(valeur)
+                    run.bold = r == 0
+                    run.italic = r == 3
+                    run.font.size = Pt(10 if r == 0 else 9)
+        for libelle, valeur in (("Traduction libre", analyse), ("Traduction littérale", litterale), ("Notes", notes)):
+            if valeur:
+                q = doc.add_paragraph()
+                q.add_run(f"{libelle} : ").italic = True
+                q.add_run(valeur)
+    doc.save(chemin)
+    return len(contenu)

@@ -210,3 +210,31 @@ def test_analyseur_applique_les_environnements(projet):
     e.variantes[0].environnement = "après nasale"
     lexique.enregistrer_entree(conn, e)
     assert [d.segmentation for d in Analyseur(conn).analyser("kóge")] == ["kó-ge"]
+
+
+# -- export de l'interlinéaire ------------------------------------------------------------------
+
+def test_export_interlineaire(lexique_morpho, tmp_path):
+    projet, _ = lexique_morpho
+    code = textes.importer_texte(projet, textes.Texte(code="", titre="Conte"), "Kóje ɓeje xyz.", "Des arbres.")
+    with projet.conn:
+        projet.conn.execute("UPDATE phrases SET traduction_litterale='arbre-PL', notes='note' WHERE ref=?",
+                            (f"{code} 1",))
+    chemin = str(tmp_path / "t.txt")
+    assert il.exporter_texte_interlineaire(projet, code, "Conte", chemin) == 1
+    lignes = open(chemin, encoding="utf-8").read().splitlines()
+    i = lignes.index(f"[{code} 1]")
+    mots, morphemes, gloses = lignes[i + 1], lignes[i + 2], lignes[i + 3]
+    assert mots.startswith("Kóje") and morphemes.startswith("kó-je") and gloses.startswith("arbre-PL")
+    assert mots.index("ɓeje") == len("arbre-PL") + 2, "colonne du 1er mot = son élément le plus long + 2"
+    assert "Traduction libre : Des arbres." in lignes and "Traduction littérale : arbre-PL" in lignes
+    import docx
+    chemin = str(tmp_path / "t.docx")
+    assert il.exporter_docx_interlineaire(projet, code, "Conte", chemin) == 1
+    d = docx.Document(chemin)
+    assert d.tables[0].cell(0, 0).text == "Kóje" and d.tables[0].cell(2, 0).text == "arbre-PL"
+
+
+def test_alignement_avec_tons():
+    # « ká » occupe 2 colonnes à l'écran, pas 3 : les marques combinantes ne comptent pas
+    assert il._largeur("ká") == 2

@@ -110,6 +110,10 @@ class PageTextes(Page):
         ligne.addWidget(importer)
         ligne.addWidget(infos)
         gl.addLayout(ligne)
+        exporter = QPushButton("Exporter ce texte (interlinéaire)…")
+        exporter.setToolTip("Texte aligné (.txt) ou Word (.docx) : mot, morphèmes, gloses, traductions")
+        exporter.clicked.connect(self._exporter)
+        gl.addWidget(exporter)
         self.meta = QLabel("")
         self.meta.setObjectName("sousTitre")
         self.meta.setWordWrap(True)
@@ -253,6 +257,24 @@ class PageTextes(Page):
             return
         self.donnees_modifiees.emit()   # rafraîchit la liste (et change la phrase courante)
         self.ouvrir_phrase(f"{code} 1")
+
+    def _exporter(self):
+        t = self._texte_courant()
+        if not t:
+            return
+        chemin, _ = QFileDialog.getSaveFileName(self, "Exporter l'interlinéaire", f"{t.titre}.docx",
+                                                "Word (*.docx);;Texte aligné (*.txt)")
+        if not chemin:
+            return
+        try:
+            with CurseurAttente():
+                fonction = il.exporter_texte_interlineaire if chemin.lower().endswith(".txt") \
+                    else il.exporter_docx_interlineaire
+                n = fonction(self.projet, t.code, t.titre, chemin)
+        except Exception as e:
+            erreur(self, "Export", "Le texte n'a pas pu être exporté.", e)
+            return
+        info(self, "Export", f"{n} phrase(s) exportée(s) en interlinéaire :\n{chemin}")
 
     def _infos(self):
         t = self._texte_courant()
