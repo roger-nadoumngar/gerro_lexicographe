@@ -34,8 +34,8 @@ def ouvrir_projet(chemin):
     projet = Projet(chemin)
     with CurseurAttente():
         corpus.synchroniser(projet)
-        # liste officielle des domaines sémantiques, copiée depuis FLEx si elle est installée
-        domaines.charger_depuis_flex(projet.conn, projet.reglage("langue_analyse_code") or "fr")
+        # liste officielle des domaines sémantiques (français et anglais), livrée avec le logiciel
+        domaines.charger_par_defaut(projet.conn, projet.reglage("langue_analyse_code") or "fr")
         alignement.recalculer(projet)
     return projet
 
@@ -57,7 +57,7 @@ def importer_projet_flex(chemin_flex, statut="à vérifier", avec_textes=True):
             projet = Projet.creer(chemin_nouveau_projet(nom), nom=nom, langue_vern_code=vern, langue_vern_nom=vern,
                                   langue_analyse_code=analyse,
                                   langue_analyse_nom={"fr": "français", "en": "anglais"}.get(analyse, analyse))
-            domaines.charger_depuis_flex(projet.conn, analyse)
+            domaines.charger_par_defaut(projet.conn, analyse)
             rapport = flex_import.importer(projet, chemin_flex, statut, avec_textes)
             projet.fermer()
     finally:

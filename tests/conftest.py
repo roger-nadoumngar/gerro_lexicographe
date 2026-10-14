@@ -20,7 +20,7 @@ DONNEES_TEST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "donnees
 
 @pytest.fixture(autouse=True)
 def corpus_de_test(monkeypatch):
-    monkeypatch.setattr("lexicographe.chemins._base_ressources", lambda: DONNEES_TEST)
+    monkeypatch.setattr("lexicographe.corpus.ressource", lambda *parties: os.path.join(DONNEES_TEST, *parties))
 
 
 @pytest.fixture

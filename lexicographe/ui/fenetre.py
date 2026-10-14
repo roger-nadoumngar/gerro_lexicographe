@@ -139,7 +139,9 @@ class FenetrePrincipale(QMainWindow):
         a = QAction("À propos", self)
         a.triggered.connect(lambda: QMessageBox.about(
             self, APP_NAME, f"<b>{APP_NAME}</b> {__version__}<br>Lexicographie et documentation des langues.<br>"
-                            f"Projet : {self.projet.chemin}"))
+                            f"Projet : {self.projet.chemin}<br><br>"
+                            "Domaines sémantiques : SIL Global, <a href='https://semdom.org'>semdom.org</a>, "
+                            "licence <a href='https://creativecommons.org/licenses/by-sa/4.0/deed.fr'>CC BY-SA 4.0</a>."))
         aide.addAction(a)
 
     def _titre(self):

@@ -122,6 +122,33 @@ def importer(conn, domaines):
     return len(domaines)
 
 
+LISTE_INTEGREE = ("domaines", "semdom-fr-en.json.gz")
+ATTRIBUTION = "Domaines sémantiques : SIL Global (semdom.org), licence CC BY-SA 4.0"
+
+
+def liste_integree():
+    """Liste livrée avec le logiciel (français et anglais), ou [] si elle manque."""
+    import gzip
+    from .chemins import ressource
+    try:
+        with gzip.open(ressource(*LISTE_INTEGREE), "rt", encoding="utf-8") as f:
+            return json.load(f)
+    except (FileNotFoundError, OSError, ValueError):
+        return []
+
+
+def charger_par_defaut(conn, langue="fr"):
+    """Donne au projet une liste de domaines s'il n'en a pas : celle livrée avec le logiciel,
+    sinon celle d'une installation de FLEx. Retourne la source utilisée, ou None."""
+    if conn.execute("SELECT 1 FROM domaines LIMIT 1").fetchone():
+        return None
+    liste = liste_integree()
+    if liste:
+        importer(conn, liste)
+        return "liste intégrée"
+    return charger_depuis_flex(conn, langue)
+
+
 def charger_depuis_flex(conn, langue="fr"):
     """Importe la liste trouvée dans FLEx si le projet n'en a pas encore.
     Retourne le chemin utilisé, ou None."""

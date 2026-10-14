@@ -95,6 +95,20 @@ def test_domaines_des_sens_et_filtre_hierarchique(avec_domaines):
     assert lexique.lire_entree(conn, eid).sens[0].domaines == [CIEL]
 
 
+def test_liste_integree_francais_anglais(projet):
+    """La liste livrée avec le logiciel suffit : FLEx n'a pas besoin d'être installé."""
+    assert domaines.charger_par_defaut(projet.conn, "fr") == "liste intégrée"
+    assert domaines.nombre(projet.conn) == 1792
+    corps = domaines.par_code(projet.conn, "2.1")
+    assert domaines.libelle(projet.conn, corps, "fr") == "2.1 Le corps"
+    assert domaines.libelle(projet.conn, corps, "en") == "2.1 Body"
+    d = domaines.details(projet.conn, corps, "en")
+    assert d["questions"][0]["question"] == "(1) What words refer to the body?"
+    assert domaines.charger_par_defaut(projet.conn, "fr") is None, "déjà chargée : pas de rechargement"
+    licence = os.path.join(os.path.dirname(domaines.__file__), "ressources", "domaines", "LICENCE.txt")
+    assert "CC BY-SA 4.0" in open(licence, encoding="utf-8").read()
+
+
 @pytest.mark.skipif(not os.path.isfile(FLEX_FR), reason="FLEx n'est pas installé")
 def test_liste_officielle_flex(projet):
     chemin = domaines.charger_depuis_flex(projet.conn, "fr")
