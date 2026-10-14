@@ -58,13 +58,12 @@ sans modifier l'original.
 | Textes | Interlinéaire : chaque mot avec ses morphèmes, gloses et catégories ; analyse mot par mot ; import de textes de terrain avec métadonnées |
 | Formes de mots | Inventaire des mots du corpus, fréquences, couverture de l'analyse |
 | Concordance | Un mot, un morphème ou un motif dans son contexte |
-| Collecte | Collecte par domaine sémantique, tâches de complément (sens, exemples, domaines, prononciation), enregistrement audio, mode locuteur plein écran |
+| Collecte | Collecte par domaine sémantique ou à partir d'une liste de mots (Word ou texte), tâches de complément (sens, exemples, domaines, prononciation), enregistrement audio, mode locuteur plein écran |
 | Syllabaire | Graphèmes du corpus, ordre d'enseignement justifié et réordonnable, mots et phrases de chaque leçon |
 | Validation | Propositions du moteur, avec les phrases qui les justifient |
-| Imports | Projet FLEx, projet Paratext (livres, glossaire, termes bibliques), LIFT, textes, USFM, Word/PDF, audio, domaines, fusion du travail d'un autre poste |
+| Imports | Projet FLEx, projet Paratext (livres, glossaire, termes bibliques), LIFT, dictionnaire imprimé (Word ou texte), Bible complète (USFM / USX, dossier ou .zip), textes, USFM, Word/PDF, audio, domaines, fusion du travail d'un autre poste |
 | Exports | Dictionnaire imprimé (PDF, Word), dossier pour Dictionary App Builder (application Android), LIFT, JSON, CSV |
 | Corpus | Phrases parallèles ; import USFM / SFM, lecture Word / PDF, enregistrements audio |
-| Exports | LIFT (FLEx, WeSay, Dictionary App Builder), JSON, CSV, texte |
 
 **Réglages du projet** (menu Fichier) : langues et codes ISO, règles de
 découpage en mots, mots vides de la langue d'analyse, seuil des
@@ -72,10 +71,24 @@ contradictions, alphabet (ordre de tri) et police de la langue, classes de sons
 (environnements d'allomorphes), catégories grammaticales hiérarchiques, traits
 grammaticaux et leurs valeurs permises.
 
-**Domaines sémantiques** : la liste officielle de SIL est copiée dans le
-projet depuis l'installation de FLEx (fichiers `LocalizedLists-fr.zip` ou
-`SemDom.xml`), ou depuis un de ces fichiers choisi dans la page Domaines.
-Elle n'est pas distribuée avec le logiciel.
+**Domaines sémantiques** : la liste officielle de SIL (1 792 domaines, 7 938
+questions d'élicitation, en français et en anglais) est livrée avec le logiciel
+et copiée dans chaque nouveau projet. Source : [semdom.org](https://semdom.org)
+(anglais) et SIL FieldWorks (français), licence
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.fr) de SIL Global ;
+voir `lexicographe/ressources/domaines/LICENCE.txt`.
+
+**Ce que contient le logiciel installé** : seulement les ressources des langues
+d'analyse (domaines sémantiques français et anglais). Aucune donnée d'une langue
+documentée : chaque linguiste crée son projet et y importe ses propres données.
+
+**Dictionnaire imprimé** (page Imports) : un dictionnaire converti en Word ou en
+texte, présenté comme ceux du Projet Sara-Baguirmi (vedette [prononciation],
+puis « N glose. Exemple. Traduction. »), complète le lexique : exemples,
+prononciations, synonymes, expressions ; les gloses et formes abîmées par une
+extraction précédente sont réparées. Une simulation est montrée avant l'import ;
+réimporter ne crée aucun doublon. La séparation exemple / traduction suit des
+règles d'orthographe du français écrites dans `dico_imprime.py`.
 
 ## Données
 
@@ -87,9 +100,10 @@ Elle n'est pas distribuée avec le logiciel.
 - Les enregistrements audio d'un projet sont copiés dans le dossier
   `<projet>_medias` à côté du fichier `.lexique`.
 
-## Corpus d'exemple
+## Corpus d'exemple (tests seulement)
 
-Ruth et Job en ngambay et en français (Louis Segond 1910, domaine public,
+Ce corpus n'est pas livré avec le logiciel ; il sert aux tests automatiques
+(`tests/donnees/corpus`). Ruth et Job en ngambay et en français (Louis Segond 1910, domaine public,
 fichiers USFM fraLSG d'[eBible.org](https://ebible.org/find/details.php?id=fraLSG)).
 1 146 références communes ; neuf références ngambay sans équivalent dans la
 source française consultée (JOB 34:37, 38:39–41, 40:29–32, 41:26) restent à

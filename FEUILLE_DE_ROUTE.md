@@ -112,10 +112,22 @@ justifiées et jamais appliquées sans décision humaine.
 - [x] Traits grammaticaux déclarés (classe nominale, ton…) avec valeurs permises : listes de choix dans la
       fiche, valeur non déclarée refusée ; les propriétés non déclarées restent libres
 
+## Version 1.2 ✅
+
+- [x] Apostrophe dans les mots (dee'g) ; alphabet ngambay ; aperçu avant impression des PDF (feuilles A4/A5)
+- [x] Bible complète en une fois (dossier ou .zip, USFM ou USX, par exemple un paquet DBL) ; marqueurs de
+      mots USFM retirés sans laisser d'espace (« d’Uts »)
+- [x] Import d'un dictionnaire imprimé (Word ou texte, présentation du Projet Sara-Baguirmi) : articles,
+      sens, exemples séparés de leur traduction par des règles d'orthographe du français, expressions,
+      prononciations, synonymes ; fusion qui complète et répare sans rien supprimer ; simulation avant ;
+      réimport sans effet
+- [x] Collecte à partir d'une liste de mots (Word ou texte, groupes), comme la liste de mots de WeSay
+- [x] Liste des domaines sémantiques de SIL livrée en français et en anglais (CC BY-SA 4.0)
+- [x] Logiciel livré sans données d'une langue documentée (le corpus ngambay ne sert qu'aux tests)
+
 ## Points restants
 
 - Claviers Keyman
 - Infixes, circonfixes, redoublement dans l'analyseur
 - Analyses du glossaire interlinéaire de Paratext reprises dans les textes
 - Export Webonary ; projet Dictionary App Builder complet
-- Liste des domaines sémantiques intégrée au logiciel (si la licence de SIL le permet)
