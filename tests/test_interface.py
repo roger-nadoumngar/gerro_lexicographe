@@ -505,9 +505,19 @@ def test_publication_depuis_les_exports(fenetre, tmp_path, monkeypatch, messages
     fenetre.projet.conn.execute("UPDATE entrees SET statut='validé'")
     fenetre.projet.conn.commit()
     e = aller(fenetre, "Exports")
+    from lexicographe.ui import apercu
+    vus = []
+
+    def simuler_apercu(dialogue):
+        # l'aperçu montre les pages ; on « clique » sur Enregistrer le PDF
+        vus.append(dialogue.document.pageCount())
+        dialogue._enregistrer()
+        return 0
+    monkeypatch.setattr(apercu.ApercuPDF, "exec", simuler_apercu)
     monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a, **k: (str(tmp_path / "dico.pdf"), ""))
     e._publier("pdf", "PDF (*.pdf)", "exporter_pdf")
-    assert os.path.getsize(tmp_path / "dico.pdf") > 1000 and ouverts[-1].endswith("dico.pdf")
+    assert vus and vus[0] >= 2, "l'aperçu affiche les pages (titre + dictionnaire)"
+    assert os.path.getsize(tmp_path / "dico.pdf") > 1000
     assert fenetre.projet.reglage("publication_titre").startswith("Dictionnaire")
     monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(tmp_path))
     e._preparer_dab()
@@ -625,3 +635,27 @@ def test_import_bible_complete(fenetre, tmp_path, monkeypatch, messages):
     assert fenetre.projet.conn.execute("SELECT analyse FROM phrases WHERE ref='RUT 1:1'").fetchone()[0] == \
         "Du temps des juges."
     assert any(m[0] == "info" and "1 livre(s)" in m[2] for m in messages)
+
+
+def test_impression_depuis_l_apercu(app, tmp_path):
+    from PySide6.QtPdf import QPdfDocument
+    from PySide6.QtPrintSupport import QPrinter
+    from lexicographe import publication
+    from lexicographe.lexique import Entree, Sens
+    from lexicographe.projet import Projet
+    from lexicographe.ui.apercu import imprimer_pdf
+    p = Projet.creer(str(tmp_path / "p.lexique"), nom="P", langue_vern_code="sba")
+    lexique.enregistrer_entree(p.conn, Entree(forme="kó", statut="validé", sens=[Sens(glose="arbre")]))
+    source = str(tmp_path / "d.pdf")
+    publication.exporter_pdf(p, source, publication.Options())
+    p.fermer()
+    doc = QPdfDocument()
+    doc.load(source)
+    # « imprimante » virtuelle : impression vers un fichier PDF
+    imprimante = QPrinter(QPrinter.HighResolution)
+    imprimante.setOutputFormat(QPrinter.PdfFormat)
+    imprimante.setOutputFileName(str(tmp_path / "imprime.pdf"))
+    imprimer_pdf(doc, imprimante)
+    imprime = QPdfDocument()
+    imprime.load(str(tmp_path / "imprime.pdf"))
+    assert imprime.pageCount() == doc.pageCount()

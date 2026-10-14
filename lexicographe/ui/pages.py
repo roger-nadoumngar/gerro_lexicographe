@@ -917,7 +917,7 @@ class PageExports(Page):
     PUBLICATIONS = [
         ("Dictionnaire imprimé (PDF)", "pdf", "PDF (*.pdf)", "exporter_pdf",
          "Mis en page sur deux colonnes, en-têtes de lettre selon l'alphabet du projet, mots-guides en haut des "
-         "pages, numéros de page, index inverse. Prêt à imprimer."),
+         "pages, numéros de page, index inverse. Aperçu page par page, puis impression ou enregistrement."),
         ("Dictionnaire (Word)", "docx", "Word (*.docx)", "exporter_docx",
          "Même contenu, à retoucher dans Word ou LibreOffice ; les mots-guides sont calculés par Word."),
     ]
@@ -966,6 +966,12 @@ class PageExports(Page):
         options = d.options()
         if not options.statuts:
             erreur(self, "Dictionnaire", "Coche au moins un statut d'entrée à publier.")
+            return
+        if extension == "pdf":
+            # aperçu sur des feuilles A4/A5 avant d'imprimer ou d'enregistrer
+            from .apercu import apercu
+            apercu(self, lambda chemin: publication.exporter_pdf(self.projet, chemin, options),
+                   f"{self.projet.nom}.pdf", f"Aperçu — {options.titre}")
             return
         chemin, _ = QFileDialog.getSaveFileName(self, "Publier", f"{self.projet.nom}.{extension}", filtre)
         if not chemin:

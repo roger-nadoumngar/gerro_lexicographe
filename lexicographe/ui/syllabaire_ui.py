@@ -1,7 +1,7 @@
 """Page Syllabaire : alphabet, graphèmes du corpus, ordre des leçons, contenu de chaque leçon."""
 
-from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QColor, QDesktopServices
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (QCheckBox, QFileDialog, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QPushButton, QSplitter, QVBoxLayout, QWidget)
 
@@ -243,17 +243,10 @@ class PageSyllabaire(Page):
 
     def _livret(self):
         from .. import publication
-        chemin, _ = QFileDialog.getSaveFileName(self, "Livret de syllabaire", "syllabaire.pdf", "PDF (*.pdf)")
-        if not chemin:
-            return
-        try:
-            with CurseurAttente():
-                n = publication.exporter_livret_syllabaire(self.projet, self.lecons, chemin)
-        except Exception as e:
-            erreur(self, "Livret", "Le livret n'a pas pu être créé.", e)
-            return
-        info(self, "Livret", f"Livret de {n} leçon(s) créé :\n{chemin}")
-        QDesktopServices.openUrl(QUrl.fromLocalFile(chemin))
+        from .apercu import apercu
+        # aperçu page par page avant d'imprimer ou d'enregistrer
+        apercu(self, lambda chemin: publication.exporter_livret_syllabaire(self.projet, self.lecons, chemin),
+               "syllabaire.pdf", "Aperçu — livret de syllabaire")
 
     def _bloom(self):
         from .. import publication
