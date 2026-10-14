@@ -13,6 +13,7 @@ from .commun import CurseurAttente, erreur, info
 from .dialogues import DialogueReglages
 from .pages_analyse import PageConcordance, PageFormes, PageTextes
 from .paratext_ui import importer_paratext
+from .syllabaire_ui import PageSyllabaire
 from .pages import (PageCorpus, PageDomaines, PageExports, PageImports, PageIndexInverse, PageLexique, PageTableauDeBord,
                     PageValidation)
 
@@ -65,6 +66,7 @@ class FenetrePrincipale(QMainWindow):
             ("Textes", textes_p),
             ("Formes de mots", PageFormes(projet)),
             ("Concordance", PageConcordance(projet)),
+            ("Syllabaire", PageSyllabaire(projet)),
             ("Validation", PageValidation(projet)),
             ("Corpus", corpus_p),
             ("Imports", imports),

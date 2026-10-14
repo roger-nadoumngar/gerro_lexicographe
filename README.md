@@ -58,6 +58,7 @@ sans modifier l'original.
 | Textes | Interlinéaire : chaque mot avec ses morphèmes, gloses et catégories ; analyse mot par mot ; import de textes de terrain avec métadonnées |
 | Formes de mots | Inventaire des mots du corpus, fréquences, couverture de l'analyse |
 | Concordance | Un mot, un morphème ou un motif dans son contexte |
+| Syllabaire | Graphèmes du corpus, ordre d'enseignement justifié et réordonnable, mots et phrases de chaque leçon |
 | Validation | Propositions du moteur, avec les phrases qui les justifient |
 | Imports | Projet FLEx, projet Paratext (livres, glossaire, termes bibliques), LIFT, textes, USFM, Word/PDF, audio, domaines |
 | Corpus | Phrases parallèles ; import USFM / SFM, lecture Word / PDF, enregistrements audio |
@@ -105,6 +106,7 @@ lexicographe/
   lift_import.py            import LIFT (FLEx, WeSay)
   flex_import.py            import direct d'un projet FLEx (.fwdata), en lecture seule
   paratext.py               lecture des projets Paratext (livres, glossaire, termes bibliques)
+  syllabaire.py             graphèmes, ordre d'enseignement, leçons (inspiré de PrimerPrep)
   textes.py                 textes du corpus, métadonnées, import de textes de terrain
   morphologie.py            analyseur morphologique à règles déclarées
   interlineaire.py          analyses validées, interlinéaire, inventaire, concordance

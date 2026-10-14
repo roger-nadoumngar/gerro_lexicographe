@@ -459,3 +459,30 @@ def test_colonnes_reglables_a_la_souris(fenetre):
     assert lex.liste.columnWidth(1) == 333, "une largeur réglée par l'utilisateur est conservée"
     ed = lex.editeur
     assert ed.onglets.widget(0).exemples.horizontalHeader().sectionResizeMode(0) == QHeaderView.Interactive
+
+
+def test_page_syllabaire(fenetre, tmp_path, monkeypatch, messages):
+    from PySide6.QtWidgets import QFileDialog
+    from lexicographe import syllabaire as sy
+    s = aller(fenetre, "Syllabaire")
+    assert s.ordre.count() == s.graphemes.rowCount() > 20, "une leçon par graphème du corpus"
+    assert "aucun alphabet déclaré" in s.resume.text()
+    s.alphabet.setText("a a̰ b ɓ d e ə g i k l m n ŋ ŋg nj o ɔ r s t u w y")
+    s._enregistrer_alphabet()
+    assert fenetre.projet.reglage("alphabet_vern").startswith("a a̰ b")
+    lignes = {s.graphemes.item(r, 0).data(0x0100): s.graphemes.item(r, 1).text() for r in range(s.graphemes.rowCount())}
+    assert lignes["ŋg"] == "lettre" and lignes["́"] == "ton"
+    # réordonner puis enregistrer
+    premier = s._ordre_courant[0]
+    s.ordre.setCurrentRow(0)
+    s._deplacer(1)
+    assert s._ordre_courant[1] == premier and s.btn_enregistrer_ordre.isEnabled()
+    s._enregistrer_ordre()
+    assert sy.ordre_enregistre(fenetre.projet) == s._ordre_courant
+    s.rafraichir()
+    assert s._ordre_courant[1] == premier, "l'ordre enregistré est rechargé"
+    s.ordre.setCurrentRow(5)
+    assert s.mots.rowCount() >= 0 and "Leçon 6" in s.titre_lecon.text()
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a, **k: (str(tmp_path / "s.txt"), ""))
+    s._exporter("txt")
+    assert "Leçon 1" in open(tmp_path / "s.txt", encoding="utf-8").read()

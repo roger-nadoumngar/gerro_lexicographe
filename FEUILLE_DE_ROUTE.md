@@ -67,14 +67,20 @@ justifiées et jamais appliquées sans décision humaine.
 - [x] Lecture seule : les projets Paratext ne sont jamais modifiés (vérifié par empreinte des fichiers)
 - [ ] Analyses du glossaire interlinéaire de Paratext reprises comme analyses de mots dans les textes
 
-## Phase 4 — Syllabaires (inspiré de PrimerPrep) — prochaine étape
+## Phase 4 — Syllabaires (inspiré de PrimerPrep) ✅ (version 0.6)
 
-- [ ] Inventaire des graphèmes (multigraphes déclarés : ng, ŋg, nj…) et des tons
-- [ ] Fréquences dans le corpus
-- [ ] Ordre d'enseignement proposé et justifié, modifiable
-- [ ] Mots et phrases utilisables à chaque leçon ; export
+- [x] Découpage en graphèmes selon l'alphabet déclaré (multigraphes, correspondance la plus longue) ;
+      tons enseignés à part ou avec leur lettre ; caractères non déclarés signalés
+- [x] Fréquences des graphèmes (occurrences, nombre de mots, exemples) ; noms propres écartés
+      (majuscule dans au moins 80 % des occurrences) ; suites de lettres fréquentes proposées comme
+      candidats multigraphes, au jugement du linguiste
+- [x] Ordre d'enseignement proposé et justifié : à chaque leçon, le graphème qui rend lisibles le plus de
+      nouveaux mots (à égalité, le plus fréquent) ; réordonnable et enregistré dans le projet
+- [x] Leçons : nouveaux mots lisibles (avec glose du lexique), phrases du corpus lisibles, part du corpus
+      couverte ; export texte et CSV
+- [ ] Mise en page de livret (Bloom, Word) — phase 5
 
-## Phase 5 — Publication
+## Phase 5 — Publication — prochaine étape
 
 - [ ] Dictionnaire imprimé : PDF et Word sur deux colonnes, mots-guides, index inverse
 - [ ] Application Android : données et configuration pour Dictionary App Builder (SIL)
