@@ -34,6 +34,8 @@ REGLAGES_PAR_DEFAUT = {
     # ordre alphabétique de la langue documentée (graphèmes séparés par des espaces)
     "alphabet_vern": "",
     "police_vern": "",
+    # classes pour les environnements d'allomorphes : « V = a e i o u ; N = m n ŋ »
+    "classes_phonologiques": "",
 }
 
 

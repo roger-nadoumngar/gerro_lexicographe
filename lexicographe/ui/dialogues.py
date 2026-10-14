@@ -287,6 +287,15 @@ class DialogueReglages(QDialog):
         self.police.setEnabled(self.avec_police.isChecked())
         self.avec_police.toggled.connect(self.police.setEnabled)
         f.addRow("Alphabet :", self.alphabet)
+        aide_classes = QLabel("Classes de sons pour les environnements d'allomorphes, une par ligne : "
+                              "« V = a e i o u ə ɛ ɔ », « N = m n ŋ ». Un allomorphe noté « / N _ » ne sera alors "
+                              "proposé qu'après une de ces lettres.")
+        aide_classes.setWordWrap(True)
+        aide_classes.setObjectName("sousTitre")
+        self.classes = QPlainTextEdit(r["classes_phonologiques"].replace(" ; ", "\n"))
+        self.classes.setFixedHeight(70)
+        f.addRow(aide_classes)
+        f.addRow("Classes :", self.classes)
         f.addRow(self.avec_police)
         f.addRow("Police :", self.police)
         onglets.addTab(ecriture, "Écriture")
@@ -407,6 +416,8 @@ class DialogueReglages(QDialog):
             "mots_vides_analyse": " ".join(self.mots_vides.toPlainText().split()),
             "seuil_contradiction": f"{self.seuil.value():.2f}",
             "alphabet_vern": " ".join(self.alphabet.toPlainText().split()),
+            "classes_phonologiques": " ; ".join(l.strip() for l in self.classes.toPlainText().splitlines()
+                                                if "=" in l),
             "police_vern": self.police.currentFont().family() if self.avec_police.isChecked() else "",
         }
         avant = self.projet.reglages

@@ -165,3 +165,48 @@ def test_liste_des_textes_avec_livres(projet):
     _corpus(projet, [("JOB 1:1", "a", "b"), ("RUT 1:1", "c", "d"), ("MANUEL x", "e", "f")])
     assert [(t.code, t.titre) for t in textes.lister(projet.conn)] == [
         ("RUT", "Ruth"), ("JOB", "Job"), ("MANUEL", "Phrases saisies")]
+
+
+# -- environnements des allomorphes ---------------------------------------------------------------
+
+from lexicographe.morphologie import Environnement, lire_classes  # noqa: E402
+
+
+def test_lecture_des_classes():
+    assert lire_classes("V = a e i o\nN = m n ŋ ; C = k ŋg") == {
+        "V": ["a", "e", "i", "o"], "N": ["m", "n", "ŋ"], "C": ["ŋg", "k"]}
+
+
+def test_environnements_formels():
+    classes = lire_classes("V = a e i o u ; N = m n ŋ ; C = k m n")
+    apres_nasale = Environnement("/ N _", classes)
+    assert apres_nasale.formel and apres_nasale.accepte("man", "") and not apres_nasale.accepte("ko", "")
+    fin_de_mot = Environnement("/ _ #", classes)
+    assert fin_de_mot.accepte("ka", "") and not fin_de_mot.accepte("ka", "g")
+    debut = Environnement("/ # _ V", classes)
+    assert debut.accepte("", "a") and not debut.accepte("k", "a")
+    lettre = Environnement("/ o _ ; / [V] _ k", {"V": ["a", "e"]})
+    assert lettre.accepte("ko", "") and lettre.accepte("ka", "k") and not lettre.accepte("ka", "")
+    for libre in ("après nasale", "/ X _", "/ [inconnue] _", "/ V"):
+        e = Environnement(libre, classes)
+        assert not e.formel and e.accepte("", ""), "non formel : affiché, jamais appliqué"
+
+
+def test_analyseur_applique_les_environnements(projet):
+    conn = projet.conn
+    projet.definir_reglages({"classes_phonologiques": "N = m n ŋ"})
+    _e(conn, "kó", "arbre", "stem")
+    _e(conn, "man", "eau", "stem")
+    _e(conn, "-je", "PL", "suffix", [Variante("-ge", "allomorphe", environnement="/ N _")])
+    a = Analyseur(conn)
+    assert [d.segmentation for d in a.analyser("mange")] == ["man-ge"]
+    assert a.analyser("kóge") == [], "« -ge » n'apparaît qu'après une nasale"
+    assert [d.segmentation for d in a.analyser("kóje")] == ["kó-je"]
+    # le même allomorphe avec un environnement en texte libre n'est pas filtré
+    projet.definir_reglages({"classes_phonologiques": ""})
+    assert [d.segmentation for d in Analyseur(conn).analyser("kóge")] == ["kó-ge"], \
+        "« / N _ » sans classe N déclarée : non formel, donc pas appliqué"
+    e = lexique.lire_entree(conn, lexique.chercher_par_forme(conn, "-je")[0])
+    e.variantes[0].environnement = "après nasale"
+    lexique.enregistrer_entree(conn, e)
+    assert [d.segmentation for d in Analyseur(conn).analyser("kóge")] == ["kó-ge"]

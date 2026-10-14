@@ -325,7 +325,10 @@ class PanneauAnalyse(QWidget):
         self.propositions.clear()
         self._decompositions = ctx.decompositions(self.forme)
         for i, d in enumerate(self._decompositions):
-            envs = [m.environnement for m in d.morphemes if m.environnement]
+            # environnement formel : vérifié par l'analyseur ; texte libre : seulement affiché
+            envs = [m.environnement + ("" if ctx.analyseur.environnement(m.environnement).formel
+                                       else " — non vérifié, écriture libre")
+                    for m in d.morphemes if m.environnement]
             texte = f"{d.segmentation}   « {d.gloses} »" + (f"   (allomorphe : {'; '.join(envs)})" if envs else "")
             item = QListWidgetItem(texte)
             item.setData(Qt.UserRole, i)

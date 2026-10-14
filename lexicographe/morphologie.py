@@ -12,8 +12,12 @@ dans le lexique.
   déclarée. Toutes les découpes possibles sont proposées, les plus simples
   d'abord ; c'est le linguiste qui valide la bonne.
 
-Limites assumées : les infixes, circonfixes et les conditions d'environnement
-des allomorphes ne sont pas encore appliqués (l'environnement est affiché).
+* Un allomorphe dont l'environnement est écrit de façon formelle (« / N _ »,
+  « / _ # »…, classes déclarées dans les réglages du projet) n'est proposé que si
+  cet environnement est respecté ; un environnement en texte libre est seulement
+  affiché.
+
+Limites assumées : les infixes et circonfixes ne sont pas encore pris en charge.
 """
 
 from dataclasses import dataclass, field
@@ -62,6 +66,121 @@ def _nettoyer(forme):
     return normaliser(forme).strip().strip(MARQUES).lower()
 
 
+# -- environnements des allomorphes ---------------------------------------------------------------
+
+BORD = "#"
+
+
+def lire_classes(texte):
+    """Classes phonologiques déclarées : « V = a e i o u ; N = m n ŋ » (une par ligne ou séparées
+    par « ; »). Retourne {nom: [graphèmes, les plus longs d'abord]}."""
+    classes = {}
+    for ligne in (texte or "").replace(";", "\n").split("\n"):
+        if "=" not in ligne:
+            continue
+        nom, membres = ligne.split("=", 1)
+        nom = nom.strip()
+        valeurs = [normaliser(m).lower() for m in membres.split() if m.strip()]
+        if nom and valeurs:
+            # ordre de déclaration conservé (tri stable), les plus longs d'abord
+            classes[nom] = sorted(dict.fromkeys(valeurs), key=lambda m: -len(m))
+    return classes
+
+
+class Environnement:
+    """Environnement d'un allomorphe, écrit comme dans FLEx : « / V _ », « / _ # », « / N _ C ».
+    `_` est la place de l'allomorphe, `#` le bord du mot, une classe s'écrit par son nom (lettre
+    majuscule ou [nom entre crochets]), tout autre caractère est une lettre à trouver telle quelle.
+    Plusieurs environnements possibles se séparent par « ; ». Un texte qui ne suit pas cette
+    écriture (« après nasale ») n'est pas formel : il est affiché mais pas appliqué."""
+
+    def __init__(self, texte, classes):
+        self.texte = (texte or "").strip()
+        self.classes = classes
+        self.alternatives = []
+        self.formel = bool(self.texte)
+        for alt in self.texte.split(";") if self.texte else []:
+            alt = alt.strip()
+            if not alt.startswith("/") or alt.count("_") != 1:
+                self.formel = False
+                return
+            gauche, droite = alt[1:].split("_")
+            g, d = self._jetons(gauche), self._jetons(droite)
+            if g is None or d is None:
+                self.formel = False
+                return
+            self.alternatives.append((g, d))
+
+    def _jetons(self, texte):
+        jetons, i = [], 0
+        texte = normaliser(texte)
+        while i < len(texte):
+            c = texte[i]
+            if c.isspace():
+                i += 1
+            elif c == BORD:
+                jetons.append(("bord", None))
+                i += 1
+            elif c == "[":
+                fin = texte.find("]", i)
+                nom = texte[i + 1:fin] if fin > 0 else ""
+                if nom not in self.classes:
+                    return None          # classe inconnue : on ne devine pas ce qu'elle contient
+                jetons.append(("classe", self.classes[nom]))
+                i = fin + 1
+            elif c.isupper():
+                if c not in self.classes:
+                    return None
+                jetons.append(("classe", self.classes[c]))
+                i += 1
+            else:
+                jetons.append(("lettre", c.lower()))
+                i += 1
+        return jetons
+
+    @staticmethod
+    def _gauche(jetons, contexte):
+        fin = len(contexte)
+        for genre, valeur in reversed(jetons):
+            if genre == "bord":
+                if fin != 0:
+                    return False
+            elif genre == "lettre":
+                if not contexte[:fin].endswith(valeur):
+                    return False
+                fin -= len(valeur)
+            else:
+                membre = next((m for m in valeur if contexte[:fin].endswith(m)), None)
+                if membre is None:
+                    return False
+                fin -= len(membre)
+        return True
+
+    @staticmethod
+    def _droite(jetons, contexte):
+        debut = 0
+        for genre, valeur in jetons:
+            if genre == "bord":
+                if debut != len(contexte):
+                    return False
+            elif genre == "lettre":
+                if not contexte.startswith(valeur, debut):
+                    return False
+                debut += len(valeur)
+            else:
+                membre = next((m for m in valeur if contexte.startswith(m, debut)), None)
+                if membre is None:
+                    return False
+                debut += len(membre)
+        return True
+
+    def accepte(self, gauche, droite):
+        """True si l'allomorphe peut apparaître entre ces contextes (toujours vrai si non formel)."""
+        if not self.formel:
+            return True
+        return any(self._gauche(g, gauche) and self._droite(d, droite) for g, d in self.alternatives)
+
+
 class Analyseur:
     """Index des formes de morphèmes du lexique ; à reconstruire après modification du lexique."""
 
@@ -100,6 +219,23 @@ class Analyseur:
                     if all(x.entree_id != eid for x in liste):
                         liste.append(m)
         self.longueurs = {role: sorted({len(f) for f in d}, reverse=True) for role, d in self.formes.items()}
+        ligne = conn.execute("SELECT valeur FROM projet WHERE cle='classes_phonologiques'").fetchone()
+        self.classes = lire_classes(ligne[0] if ligne else "")
+        self._environnements = {}
+
+    def environnement(self, texte):
+        if texte not in self._environnements:
+            self._environnements[texte] = Environnement(texte, self.classes)
+        return self._environnements[texte]
+
+    def _respecte_environnements(self, mot, decomposition):
+        position = 0
+        for m in decomposition.morphemes:
+            fin = position + len(m.forme)
+            if m.environnement and not self.environnement(m.environnement).accepte(mot[:position], mot[fin:]):
+                return False
+            position = fin
+        return True
 
     def analyser(self, mot):
         """Toutes les décompositions du mot, les plus simples d'abord."""
@@ -136,6 +272,8 @@ class Analyseur:
                         suffixes(debut + n, pris + [m], compte + 1)
 
         prefixes(0, [])
+        # un allomorphe dont l'environnement (formel) n'est pas respecté est écarté
+        resultats = [d for d in resultats if self._respecte_environnements(mot, d)]
         uniques = {}
         for d in resultats:
             uniques.setdefault(tuple((m.forme, m.entree_id) for m in d.morphemes), d)
