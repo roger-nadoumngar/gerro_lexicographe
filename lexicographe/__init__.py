@@ -12,6 +12,8 @@ Organisation du paquet :
     paratext     lecture des projets Paratext (livres, glossaire, termes bibliques)
     syllabaire   graphèmes, ordre d'enseignement et leçons (inspiré de PrimerPrep)
     publication  dictionnaire PDF / Word, livret, Bloom, Dictionary App Builder
+    collecte     collecte par domaine et tâches de complément (inspiré de WeSay)
+    fusion       fusion du travail d'un autre poste
     textes       textes du corpus et leurs métadonnées
     morphologie  analyseur morphologique à règles déclarées
     interlineaire analyses, interlinéaire, inventaire des formes, concordance
@@ -24,4 +26,4 @@ Organisation du paquet :
 
 APP_NAME = "Gerro Lexicographe"
 APP_ID = "GerroLexicographe"
-__version__ = "0.7.0"
+__version__ = "1.0.0"

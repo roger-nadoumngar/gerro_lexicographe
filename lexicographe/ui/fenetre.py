@@ -14,6 +14,7 @@ from .dialogues import DialogueReglages
 from .pages_analyse import PageConcordance, PageFormes, PageTextes
 from .paratext_ui import importer_paratext
 from .syllabaire_ui import PageSyllabaire
+from .collecte_ui import PageCollecte
 from .pages import (PageCorpus, PageDomaines, PageExports, PageImports, PageIndexInverse, PageLexique, PageTableauDeBord,
                     PageValidation)
 
@@ -57,6 +58,10 @@ class FenetrePrincipale(QMainWindow):
             ("Document Word ou PDF", "Lecture du texte pour en copier des phrases.", corpus_p._lire_document),
             ("Enregistrement audio", "Fichier conservé dans le dossier du projet.", corpus_p._importer_audio),
             ("Liste de domaines sémantiques", "Fichier SemDom.xml ou LocalizedLists de FLEx.", domaines_p._importer),
+            ("Travail d'un autre poste (fusion)", "Réunir un projet copié depuis un autre ordinateur (collecte sur "
+                                                 "le terrain…) : entrées nouvelles ajoutées ; pour une entrée modifiée "
+                                                 "des deux côtés, la version la plus récente l'emporte.",
+             self._fusionner),
         ])
         self.pages = [
             ("Tableau de bord", PageTableauDeBord(projet)),
@@ -66,6 +71,7 @@ class FenetrePrincipale(QMainWindow):
             ("Textes", textes_p),
             ("Formes de mots", PageFormes(projet)),
             ("Concordance", PageConcordance(projet)),
+            ("Collecte", PageCollecte(projet)),
             ("Syllabaire", PageSyllabaire(projet)),
             ("Validation", PageValidation(projet)),
             ("Corpus", corpus_p),
@@ -145,6 +151,23 @@ class FenetrePrincipale(QMainWindow):
         if getattr(page, "perime", True):
             page.rafraichir()
             page.perime = False
+
+    def _fusionner(self):
+        from PySide6.QtWidgets import QFileDialog
+        from .. import fusion
+        from ..projet import EXTENSION
+        chemin, _ = QFileDialog.getOpenFileName(self, "Projet d'un autre poste", "", f"Projet (*{EXTENSION})")
+        if not chemin:
+            return
+        try:
+            self.projet.sauvegarde_automatique()
+            with CurseurAttente():
+                rapport = fusion.fusionner(self.projet, chemin)
+        except Exception as e:
+            erreur(self, "Fusion", "La fusion n'a pas abouti. Le projet a été sauvegardé juste avant.", e)
+            return
+        self.rafraichir_tout()
+        info(self, "Fusion", rapport.resume())
 
     def _importer_paratext(self):
         if importer_paratext(self, self.projet):

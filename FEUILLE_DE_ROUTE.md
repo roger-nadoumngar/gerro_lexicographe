@@ -91,9 +91,23 @@ justifiées et jamais appliquées sans décision humaine.
 - [ ] Export Webonary (dictionnaire en ligne)
 - [ ] Projet Dictionary App Builder complet (sans passer par l'assistant de DAB)
 
-## Phase 6 — Collecte communautaire (inspiré de WeSay) — prochaine étape
+## Phase 6 — Collecte communautaire (inspiré de WeSay) ✅ (version 1.0)
 
-- [ ] Mode simplifié pour les locuteurs
-- [ ] Collecte guidée par domaine sémantique
-- [ ] Enregistrement audio direct
-- [ ] Échange de données entre plusieurs postes
+- [x] Collecte guidée par domaine sémantique : une question d'élicitation à la fois (7 945 questions avec
+      la liste de FLEx), mots donnés enregistrés comme brouillons classés dans le domaine, sans doublon
+      (majuscules ignorées), reprise là où la collecte s'est arrêtée
+- [x] Tâches de complément, une entrée à la fois : sens manquant, exemple manquant, domaine manquant,
+      prononciation manquante ; seul le champ de la tâche est modifié
+- [x] Enregistrement audio direct avec le micro de l'ordinateur (WAV), lié à l'entrée, écoute immédiate
+- [x] Mode locuteur : plein écran, gros caractères, sans les menus du logiciel
+- [x] Fusion du travail d'un autre poste : entrées reconnues par identifiant, nouvelles ajoutées (avec sons
+      et images), la version modifiée le plus récemment l'emporte, phrases et textes ajoutés ; l'autre fichier
+      n'est jamais modifié ; rapport détaillé
+
+## Après la version 1.0 — points restants
+
+- Traits grammaticaux structurés ; claviers Keyman
+- Environnements d'allomorphes appliqués par l'analyseur ; infixes, redoublement ; export de l'interlinéaire
+- Analyses du glossaire interlinéaire de Paratext reprises dans les textes
+- Export Webonary ; projet Dictionary App Builder complet
+- Liste des domaines sémantiques intégrée au logiciel (si la licence de SIL le permet)

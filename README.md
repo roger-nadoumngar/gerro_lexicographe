@@ -58,9 +58,10 @@ sans modifier l'original.
 | Textes | Interlinéaire : chaque mot avec ses morphèmes, gloses et catégories ; analyse mot par mot ; import de textes de terrain avec métadonnées |
 | Formes de mots | Inventaire des mots du corpus, fréquences, couverture de l'analyse |
 | Concordance | Un mot, un morphème ou un motif dans son contexte |
+| Collecte | Collecte par domaine sémantique, tâches de complément (sens, exemples, domaines, prononciation), enregistrement audio, mode locuteur plein écran |
 | Syllabaire | Graphèmes du corpus, ordre d'enseignement justifié et réordonnable, mots et phrases de chaque leçon |
 | Validation | Propositions du moteur, avec les phrases qui les justifient |
-| Imports | Projet FLEx, projet Paratext (livres, glossaire, termes bibliques), LIFT, textes, USFM, Word/PDF, audio, domaines |
+| Imports | Projet FLEx, projet Paratext (livres, glossaire, termes bibliques), LIFT, textes, USFM, Word/PDF, audio, domaines, fusion du travail d'un autre poste |
 | Exports | Dictionnaire imprimé (PDF, Word), dossier pour Dictionary App Builder (application Android), LIFT, JSON, CSV |
 | Corpus | Phrases parallèles ; import USFM / SFM, lecture Word / PDF, enregistrements audio |
 | Exports | LIFT (FLEx, WeSay, Dictionary App Builder), JSON, CSV, texte |
@@ -109,6 +110,8 @@ lexicographe/
   paratext.py               lecture des projets Paratext (livres, glossaire, termes bibliques)
   syllabaire.py             graphèmes, ordre d'enseignement, leçons (inspiré de PrimerPrep)
   publication.py            dictionnaire PDF / Word, livret de syllabaire, Bloom, Dictionary App Builder
+  collecte.py               collecte par domaine et tâches de complément (inspiré de WeSay)
+  fusion.py                 fusion du travail d'un autre poste
   textes.py                 textes du corpus, métadonnées, import de textes de terrain
   morphologie.py            analyseur morphologique à règles déclarées
   interlineaire.py          analyses validées, interlinéaire, inventaire, concordance

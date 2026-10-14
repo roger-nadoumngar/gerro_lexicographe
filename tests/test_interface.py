@@ -42,6 +42,11 @@ def fenetre(app, tmp_path, messages, monkeypatch):
     yield f
     f.close()
     projet.fermer()
+    # détruire réellement la fenêtre : sinon les fenêtres des tests précédents s'accumulent
+    # et chaque traitement d'événements devient plus lent
+    f.deleteLater()
+    from PySide6.QtCore import QCoreApplication, QEvent
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
 
 
 def page(fenetre, nom):
@@ -392,7 +397,7 @@ def test_page_imports_et_menu(fenetre, monkeypatch):
     imports = aller(fenetre, "Imports")
     from PySide6.QtWidgets import QPushButton
     textes = [b.text() for b in imports.findChildren(QPushButton)]
-    assert textes.count("Importer…") == 8
+    assert textes.count("Importer…") == 9
     menu = [a.text() for a in fenetre.menuBar().actions()[0].menu().actions()]
     assert "Importer un projet FLEx…" in menu and "Tous les imports…" in menu
     appels = []
@@ -507,3 +512,76 @@ def test_publication_depuis_les_exports(fenetre, tmp_path, monkeypatch, messages
     monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(tmp_path))
     e._preparer_dab()
     assert any(m[0] == "info" and "Dictionary App Builder" in m[2] for m in messages)
+
+
+# -- phase 6 : collecte communautaire -------------------------------------------------------------
+
+def _domaines_test(projet):
+    from lexicographe import domaines
+    if not projet.conn.execute("SELECT 1 FROM domaines LIMIT 1").fetchone():
+        domaines.importer(projet.conn, [{"guid": "d-corps", "code": "2.1", "parent": None, "noms": {"fr": "Corps"},
+                                         "descriptions": {}, "questions": []}])
+
+
+def test_collecte_par_domaine(fenetre):
+    projet = fenetre.projet
+    _domaines_test(projet)
+    c = aller(fenetre, "Collecte")
+    assert "à faire" in c.collecte.cartes["glose"].text() or "rien" in c.collecte.cartes["glose"].text()
+    c.collecte.commencer("domaine_collecte")
+    d = c.collecte.par_domaine
+    assert c.collecte.pile.currentWidget() is d and d.question.text()
+    guid = d.questions[d.index].guid
+    d.mot.setText("Dɔ-test")
+    d.glose.setText("tête")
+    d._ajouter()
+    (eid,) = lexique.chercher_par_forme(projet.conn, "Dɔ-test")
+    e = lexique.lire_entree(projet.conn, eid)
+    assert e.statut == "brouillon" and e.sens[0].domaines == [guid] and d.liste.count() >= 1
+    assert d.enregistreur.entree_id == eid, "l'enregistreur est prêt pour le mot qui vient d'être ajouté"
+    d._aller_a(d.index + 1)
+    from lexicographe import collecte
+    assert collecte.position_enregistree(projet)["guid"] == d.questions[d.index].guid
+    d.retour.emit()
+    assert c.collecte.pile.currentIndex() == 0
+
+
+def test_taches_de_complement(fenetre):
+    projet = fenetre.projet
+    lex = aller(fenetre, "Lexique")
+    _nouvelle_entree(lex, "zza", "")
+    c = aller(fenetre, "Collecte")
+    c.collecte.commencer("glose")
+    f = c.collecte.fiche
+    assert f.ids and f.champ.isVisibleTo(f) and not f.btn_domaine.isVisibleTo(f)
+    rang = f.ids.index(lexique.chercher_par_forme(projet.conn, "zza")[0])
+    f.index = rang
+    f._afficher()
+    f.champ.setText("essai")
+    f._valider()
+    assert lexique.lire_entree(projet.conn, f.ids[rang]).sens[0].glose == "essai"
+    c.collecte.commencer("exemple")
+    assert f.champ2.isVisibleTo(f)
+    c.collecte.commencer("audio")
+    assert f.enregistreur.isVisibleTo(f) and not f.btn_valider.isVisibleTo(f)
+
+
+def test_mode_locuteur(fenetre):
+    from lexicographe.ui.collecte_ui import ModeLocuteur
+    d = ModeLocuteur(fenetre.projet, fenetre)
+    assert d.collecte.pile.currentIndex() == 0 and d.font().pointSizeF() > fenetre.font().pointSizeF()
+    d.done(0)
+
+
+def test_fusion_depuis_les_imports(fenetre, tmp_path, monkeypatch, messages):
+    from PySide6.QtWidgets import QFileDialog
+    from lexicographe.projet import Projet
+    autre = str(tmp_path / "poste2.lexique")
+    fenetre.projet.sauvegarder_vers(autre)
+    p2 = Projet(autre)
+    lexique.enregistrer_entree(p2.conn, lexique.Entree(forme="motdeposte2", sens=[lexique.Sens(glose="x")]))
+    p2.fermer()
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **k: (autre, ""))
+    fenetre._fusionner()
+    assert lexique.chercher_par_forme(fenetre.projet.conn, "motdeposte2")
+    assert any(m[0] == "info" and "1 entrée(s) ajoutée(s)" in m[2] for m in messages)
