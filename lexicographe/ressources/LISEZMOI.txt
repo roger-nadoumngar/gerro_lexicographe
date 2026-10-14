@@ -1,0 +1,9 @@
+Ressources livrées avec Gerro Lexicographe
+==========================================
+
+Ce dossier est inclus dans le .exe. Il ne contient que des ressources des langues
+d'analyse (français et anglais), jamais de données d'une langue documentée :
+chaque linguiste crée son propre projet et y importe ses données (FLEx, Paratext,
+LIFT, dictionnaire imprimé, textes…).
+
+Le corpus d'exemple ngambay (Ruth et Job) sert seulement aux tests : tests/donnees.

@@ -119,11 +119,12 @@ lexicographe/
   interlineaire.py          analyses validées, interlinéaire, inventaire, concordance
   alignement.py             propositions de traduction, preuves, contradictions
   usfm.py                   lecture USFM / SFM, ordre canonique des livres
-  corpus.py                 corpus d'exemple intégré
+  corpus.py                 corpus d'exemple (tests seulement, non livré)
+  dico_imprime.py           import d'un dictionnaire imprimé (Word ou texte)
   exports.py                LIFT, JSON, CSV, texte
-  ressources/corpus/        Ruth et Job (ngambay, français)
+  ressources/               ressources livrées avec le logiciel (aucune donnée de langue documentée)
   ui/                       interface PySide6 (Qt)
-tests/                      tests automatiques (pytest)
+tests/                      tests automatiques (pytest) ; tests/donnees : Ruth et Job ngambay–français
 ```
 
 ```bash

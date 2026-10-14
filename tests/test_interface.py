@@ -546,6 +546,28 @@ def _domaines_test(projet):
                                          "descriptions": {}, "questions": []}])
 
 
+def test_collecte_par_liste(fenetre, tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QFileDialog, QInputDialog
+    from tests.test_collecte import _liste_word
+    chemin = str(tmp_path / "liste.docx")
+    _liste_word(chemin)
+    c = aller(fenetre, "Collecte")
+    assert "aucune liste" in c.collecte.cartes["liste_collecte"].text()
+    c.collecte.commencer("liste_collecte")
+    ecran = c.collecte.par_liste
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **k: (chemin, ""))
+    monkeypatch.setattr(QInputDialog, "getText", lambda *a, **k: ("Liste test", True))
+    ecran._importer()
+    assert ecran.choix.currentText() == "Liste test" and ecran.mot_liste.text() == "eau"
+    ecran.mot.setText("màn̄")
+    ecran._ajouter()
+    assert "màn̄" in ecran.connus.text()
+    ecran._prochain_manquant()
+    assert ecran.mot_liste.text() == "feu"
+    c.collecte.accueil()
+    assert "1 mot(s) trouvé(s) sur 3" in c.collecte.cartes["liste_collecte"].text()
+
+
 def test_collecte_par_domaine(fenetre):
     projet = fenetre.projet
     _domaines_test(projet)
