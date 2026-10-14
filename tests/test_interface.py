@@ -397,13 +397,26 @@ def test_page_imports_et_menu(fenetre, monkeypatch):
     imports = aller(fenetre, "Imports")
     from PySide6.QtWidgets import QPushButton
     textes = [b.text() for b in imports.findChildren(QPushButton)]
-    assert textes.count("Importer…") == 10
+    assert textes.count("Importer…") == 11
     menu = [a.text() for a in fenetre.menuBar().actions()[0].menu().actions()]
     assert "Importer un projet FLEx…" in menu and "Tous les imports…" in menu
     appels = []
     monkeypatch.setattr("lexicographe.ui.dialogues.DialogueFlex.exec", lambda self: appels.append(1) or False)
     imports.findChildren(QPushButton)[0].click()
     assert appels == [1], "le premier bouton ouvre le choix du projet FLEx"
+
+
+def test_import_dictionnaire_imprime(fenetre, tmp_path, monkeypatch, messages):
+    from PySide6.QtWidgets import QFileDialog, QInputDialog
+    from tests.test_dico_imprime import LIVRE
+    chemin = tmp_path / "dico.txt"
+    chemin.write_text("\n".join(LIVRE), encoding="utf-8")
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **k: (str(chemin), ""))
+    monkeypatch.setattr(QInputDialog, "getText", lambda *a, **k: ("dictionnaire d'exemple", True))
+    fenetre._importer_dictionnaire()
+    assert not [m for m in messages if m[0] == "erreur"]
+    assert any(m[0] == "info" and "9 entrée(s) créée(s)" in m[2] and "Sauvegarde" in m[2] for m in messages)
+    assert lexique.chercher_par_forme(fenetre.projet.conn, "àw̄ kédé")
 
 
 def test_dialogue_paratext(fenetre, tmp_path, monkeypatch, messages):

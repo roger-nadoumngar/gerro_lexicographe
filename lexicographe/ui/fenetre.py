@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (QFileDialog, QHBoxLayout, QListWidget, QListWidge
 from .. import APP_NAME, __version__, alignement
 from ..chemins import dossier_sauvegardes
 from ..projet import EXTENSION
-from .commun import CurseurAttente, erreur, info
+from .commun import CurseurAttente, confirmer, erreur, info
 from .dialogues import DialogueReglages
 from .pages_analyse import PageConcordance, PageFormes, PageTextes
 from .paratext_ui import importer_paratext
@@ -52,6 +52,12 @@ class FenetrePrincipale(QMainWindow):
              self._importer_paratext),
             ("Fichier LIFT (FLEx, WeSay)", "Lexique exporté par FLEx, WeSay ou un autre outil SIL.",
              lexique_p._importer_lift),
+            ("Dictionnaire imprimé (Word ou texte)", "Dictionnaire converti en .docx ou .txt, présenté comme ceux "
+                                                     "du Projet Sara-Baguirmi (vedette [prononciation], puis « N glose. "
+                                                     "Exemple. Traduction. »). Complète les entrées existantes "
+                                                     "(exemples, prononciations, synonymes, expressions), répare les "
+                                                     "gloses coupées ; une simulation est montrée avant.",
+             self._importer_dictionnaire),
             ("Texte de terrain (.txt)", "Conte, récit, conversation… avec sa traduction et ses informations "
                                         "(genre, locuteur, lieu, date).", textes_p._importer),
             ("Bible complète (dossier ou archive .zip)", "Tous les livres d'un coup, en USFM ou en USX : par exemple "
@@ -197,6 +203,45 @@ class FenetrePrincipale(QMainWindow):
         info(self, "Bible complète", f"{len(livres)} livre(s), {nouveaux + completes} versets "
                                      f"({nouveaux} nouveaux, {completes} complétés).\n"
                                      f"Le corpus compte {paires} phrase(s) dans les deux langues.")
+
+    def _importer_dictionnaire(self):
+        from PySide6.QtWidgets import QInputDialog
+        from .. import dico_imprime
+        chemin, _ = QFileDialog.getOpenFileName(self, "Dictionnaire imprimé", "",
+                                                "Word ou texte (*.docx *.txt);;Tous les fichiers (*)")
+        if not chemin:
+            return
+        source, ok = QInputDialog.getText(
+            self, "Dictionnaire imprimé", "Auteurs, titre et année (notés sur chaque exemple et entrée créée) :",
+            text=os.path.splitext(os.path.basename(chemin))[0])
+        if not ok or not source.strip():
+            return
+        try:
+            with CurseurAttente():
+                lecture = dico_imprime.lire(chemin)
+                if not lecture.articles:
+                    raise ValueError("Aucun article reconnu : une ligne de vedette suivie d'une ligne qui commence "
+                                     "par une catégorie (N, V, VT, AV…).")
+                simulation = dico_imprime.fusionner(self.projet, lecture, source.strip(), simulation=True)
+        except Exception as e:
+            erreur(self, "Dictionnaire imprimé", "Le fichier n'a pas pu être lu.", e)
+            return
+        n = lecture.compter()
+        texte = (f"Lu : {n['articles']} articles, {n['sens']} sens, {n['exemples']} exemples, "
+                 f"{n['expressions']} expressions ; {len(lecture.avertissements)} passage(s) non reconnu(s) "
+                 f"(gardés en note ou ignorés).\n\n{simulation.resume()}\n\n"
+                 "Rien n'est supprimé, et le projet est sauvegardé avant. Importer ?")
+        if not confirmer(self, "Dictionnaire imprimé", texte):
+            return
+        try:
+            sauvegarde = self.projet.sauvegarde_automatique()
+            with CurseurAttente():
+                rapport = dico_imprime.fusionner(self.projet, lecture, source.strip())
+        except Exception as e:
+            erreur(self, "Dictionnaire imprimé", "L'import n'a pas abouti. Le projet a été sauvegardé juste avant.", e)
+            return
+        self.rafraichir_tout()
+        info(self, "Dictionnaire imprimé", f"{rapport.resume()}\n\nSauvegarde d'avant l'import :\n{sauvegarde}")
 
     def _fusionner(self):
         from PySide6.QtWidgets import QFileDialog
