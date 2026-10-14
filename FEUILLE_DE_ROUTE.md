@@ -80,14 +80,18 @@ justifiées et jamais appliquées sans décision humaine.
       couverte ; export texte et CSV
 - [ ] Mise en page de livret (Bloom, Word) — phase 5
 
-## Phase 5 — Publication — prochaine étape
+## Phase 5 — Publication ✅ (version 0.7)
 
-- [ ] Dictionnaire imprimé : PDF et Word sur deux colonnes, mots-guides, index inverse
-- [ ] Application Android : données et configuration pour Dictionary App Builder (SIL)
-- [ ] Listes de mots et livrets pour Bloom
-- [ ] Export Webonary
+- [x] Dictionnaire imprimé en PDF (mise en page par le logiciel) : page de titre, deux colonnes, en-têtes
+      de lettre selon l'alphabet déclaré, mots-guides, numéros de page, index inverse ; A4 ou A5 ;
+      statuts publiés au choix (par défaut : validé et à vérifier)
+- [x] Dictionnaire en Word (.docx) : deux colonnes, mots-guides calculés par Word, styles modifiables
+- [x] Application Android : dossier prêt pour Dictionary App Builder (LIFT avec sons et images, mode d'emploi)
+- [x] Livret de syllabaire en PDF (une leçon par page) ; fichiers pour l'outil « Decodable Reader » de Bloom
+- [ ] Export Webonary (dictionnaire en ligne)
+- [ ] Projet Dictionary App Builder complet (sans passer par l'assistant de DAB)
 
-## Phase 6 — Collecte communautaire (inspiré de WeSay)
+## Phase 6 — Collecte communautaire (inspiré de WeSay) — prochaine étape
 
 - [ ] Mode simplifié pour les locuteurs
 - [ ] Collecte guidée par domaine sémantique

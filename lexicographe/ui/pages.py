@@ -6,8 +6,9 @@ from contextlib import contextmanager
 import os
 from datetime import datetime
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QFileDialog, QFormLayout, QGridLayout, QHBoxLayout, QMenu,
+from PySide6.QtCore import Qt, QUrl, Signal
+from PySide6.QtGui import QDesktopServices
+from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QFileDialog, QFormLayout, QGridLayout, QHBoxLayout, QMenu,
                                QHeaderView, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QPlainTextEdit, QPushButton, QSplitter, QTableWidget, QTableWidgetItem,
                                QTextBrowser, QVBoxLayout, QWidget, QDialog, QDialogButtonBox)
@@ -861,34 +862,137 @@ class PageImports(Page):
         self.racine.addStretch()
 
 
+class DialoguePublication(QDialog):
+    """Options du dictionnaire imprimé."""
+
+    def __init__(self, projet, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Dictionnaire imprimé")
+        self.setMinimumWidth(520)
+        form = QFormLayout(self)
+        vern = projet.reglage("langue_vern_nom") or projet.reglage("langue_vern_code")
+        analyse = projet.reglage("langue_analyse_nom") or projet.reglage("langue_analyse_code")
+        self.titre = QLineEdit(projet.reglage("publication_titre") or f"Dictionnaire {vern} – {analyse}")
+        self.sous_titre = QLineEdit(projet.reglage("publication_sous_titre"))
+        self.auteurs = QLineEdit(projet.reglage("publication_auteurs"))
+        self.statuts = {}
+        ligne = QHBoxLayout()
+        for statut in lexique.STATUTS:
+            case = QCheckBox(statut)
+            case.setChecked(statut != "brouillon")
+            self.statuts[statut] = case
+            ligne.addWidget(case)
+        self.exemples = QCheckBox("Exemples")
+        self.exemples.setChecked(True)
+        self.index = QCheckBox(f"Index {analyse} – {vern}")
+        self.index.setChecked(True)
+        self.format = QComboBox()
+        self.format.addItems(["A4", "A5"])
+        form.addRow("Titre :", self.titre)
+        form.addRow("Sous-titre :", self.sous_titre)
+        form.addRow("Auteurs :", self.auteurs)
+        form.addRow("Entrées publiées :", ligne)
+        form.addRow(self.exemples)
+        form.addRow(self.index)
+        form.addRow("Format :", self.format)
+        boutons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        boutons.accepted.connect(self.accept)
+        boutons.rejected.connect(self.reject)
+        form.addRow(boutons)
+        self.projet = projet
+
+    def options(self):
+        from .. import publication
+        self.projet.definir_reglages({"publication_titre": self.titre.text().strip(),
+                                      "publication_sous_titre": self.sous_titre.text().strip(),
+                                      "publication_auteurs": self.auteurs.text().strip()})
+        return publication.Options(titre=self.titre.text().strip(), sous_titre=self.sous_titre.text().strip(),
+                                   auteurs=self.auteurs.text().strip(),
+                                   statuts=tuple(s for s, c in self.statuts.items() if c.isChecked()),
+                                   exemples=self.exemples.isChecked(), index_inverse=self.index.isChecked(),
+                                   format_page=self.format.currentText())
+
+
 class PageExports(Page):
+    PUBLICATIONS = [
+        ("Dictionnaire imprimé (PDF)", "pdf", "PDF (*.pdf)", "exporter_pdf",
+         "Mis en page sur deux colonnes, en-têtes de lettre selon l'alphabet du projet, mots-guides en haut des "
+         "pages, numéros de page, index inverse. Prêt à imprimer."),
+        ("Dictionnaire (Word)", "docx", "Word (*.docx)", "exporter_docx",
+         "Même contenu, à retoucher dans Word ou LibreOffice ; les mots-guides sont calculés par Word."),
+    ]
     FORMATS = [
         ("LIFT (FLEx, WeSay, Dictionary App Builder)", "lift", "LIFT (*.lift)", exports.exporter_lift,
-         "Format d'échange de SIL : s'importe dans FLEx et WeSay, et sert de source à Dictionary App "
-         "Builder pour créer une application Android."),
+         "Format d'échange de SIL : s'importe dans FLEx et WeSay."),
         ("JSON", "json", "JSON (*.json)", exports.exporter_json, "Données complètes, pour d'autres programmes."),
         ("CSV (Excel, LibreOffice)", "csv", "CSV (*.csv)", exports.exporter_csv, "Une ligne par sens."),
         ("Texte imprimable", "txt", "Texte (*.txt)", exports.exporter_texte, "Liste lisible des entrées."),
     ]
 
     def __init__(self, projet):
-        super().__init__(projet, "Exports", "Le dictionnaire imprimé mis en page (PDF / Word) et la préparation "
-                                            "complète d'applications Android arrivent en phase 5.")
+        super().__init__(projet, "Exports", "Publier le dictionnaire, préparer l'application Android, ou échanger "
+                                            "les données avec d'autres logiciels.")
+        for nom, extension, filtre, fonction, aide in self.PUBLICATIONS:
+            self._carte(nom, aide, "Publier…",
+                        lambda _=False, e=extension, f=filtre, fn=fonction: self._publier(e, f, fn))
+        self._carte("Application Android (Dictionary App Builder)",
+                    "Dossier prêt à importer dans Dictionary App Builder (SIL) : le dictionnaire au format LIFT avec "
+                    "ses sons et ses images, et le mode d'emploi.", "Préparer…", self._preparer_dab)
         for nom, extension, filtre, fonction, aide in self.FORMATS:
-            c = carte()
-            h = QHBoxLayout(c)
-            v = QVBoxLayout()
-            v.addWidget(QLabel(f"<b>{nom}</b>"))
-            a = QLabel(aide)
-            a.setObjectName("sousTitre")
-            a.setWordWrap(True)
-            v.addWidget(a)
-            h.addLayout(v, 1)
-            b = QPushButton("Exporter…")
-            b.clicked.connect(lambda _=False, e=extension, f=filtre, fn=fonction: self._exporter(e, f, fn))
-            h.addWidget(b)
-            self.racine.addWidget(c)
+            self._carte(nom, aide, "Exporter…",
+                        lambda _=False, e=extension, f=filtre, fn=fonction: self._exporter(e, f, fn))
         self.racine.addStretch()
+
+    def _carte(self, nom, aide, texte_bouton, action):
+        c = carte()
+        h = QHBoxLayout(c)
+        v = QVBoxLayout()
+        v.addWidget(QLabel(f"<b>{nom}</b>"))
+        a = QLabel(aide)
+        a.setObjectName("sousTitre")
+        a.setWordWrap(True)
+        v.addWidget(a)
+        h.addLayout(v, 1)
+        b = QPushButton(texte_bouton)
+        b.clicked.connect(action)
+        h.addWidget(b)
+        self.racine.addWidget(c)
+
+    def _publier(self, extension, filtre, nom_fonction):
+        from .. import publication
+        d = DialoguePublication(self.projet, self)
+        if not d.exec():
+            return
+        options = d.options()
+        if not options.statuts:
+            erreur(self, "Dictionnaire", "Coche au moins un statut d'entrée à publier.")
+            return
+        chemin, _ = QFileDialog.getSaveFileName(self, "Publier", f"{self.projet.nom}.{extension}", filtre)
+        if not chemin:
+            return
+        try:
+            with CurseurAttente():
+                n = getattr(publication, nom_fonction)(self.projet, chemin, options)
+        except Exception as e:
+            erreur(self, "Publication impossible", "Le fichier n'a pas pu être créé.", e)
+            return
+        info(self, "Publication terminée", f"{n} entrée(s) publiée(s) :\n{chemin}")
+        QDesktopServices.openUrl(QUrl.fromLocalFile(chemin))
+
+    def _preparer_dab(self):
+        from .. import publication
+        dossier = QFileDialog.getExistingDirectory(self, "Dossier où préparer l'application")
+        if not dossier:
+            return
+        try:
+            with CurseurAttente():
+                lift = publication.preparer_dab(self.projet, dossier)
+        except Exception as e:
+            erreur(self, "Application Android", "Le dossier n'a pas pu être préparé.", e)
+            return
+        info(self, "Application Android", "Dossier prêt pour Dictionary App Builder :\n"
+                                          f"{os.path.dirname(lift)}\n\nLis le fichier LISEZ-MOI.txt qu'il contient.")
+        QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.dirname(lift)))
 
     def _exporter(self, extension, filtre, fonction):
         nom = f"{self.projet.nom}.{extension}"

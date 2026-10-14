@@ -1,7 +1,7 @@
 """Page Syllabaire : alphabet, graphèmes du corpus, ordre des leçons, contenu de chaque leçon."""
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
+from PySide6.QtCore import Qt, QUrl
+from PySide6.QtGui import QColor, QDesktopServices
 from PySide6.QtWidgets import (QCheckBox, QFileDialog, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QPushButton, QSplitter, QVBoxLayout, QWidget)
 
@@ -104,7 +104,8 @@ class PageSyllabaire(Page):
 
         bas = QHBoxLayout()
         bas.addStretch()
-        for texte, action in (("Exporter en texte…", lambda: self._exporter("txt")),
+        for texte, action in (("Livret PDF…", self._livret), ("Pour Bloom…", self._bloom),
+                              ("Exporter en texte…", lambda: self._exporter("txt")),
                               ("Exporter en CSV…", lambda: self._exporter("csv"))):
             b = QPushButton(texte)
             b.clicked.connect(action)
@@ -239,6 +240,32 @@ class PageSyllabaire(Page):
         sy.enregistrer_ordre(self.projet, self._ordre_courant)
         self._modifie = False
         self.btn_enregistrer_ordre.setEnabled(False)
+
+    def _livret(self):
+        from .. import publication
+        chemin, _ = QFileDialog.getSaveFileName(self, "Livret de syllabaire", "syllabaire.pdf", "PDF (*.pdf)")
+        if not chemin:
+            return
+        try:
+            with CurseurAttente():
+                n = publication.exporter_livret_syllabaire(self.projet, self.lecons, chemin)
+        except Exception as e:
+            erreur(self, "Livret", "Le livret n'a pas pu être créé.", e)
+            return
+        info(self, "Livret", f"Livret de {n} leçon(s) créé :\n{chemin}")
+        QDesktopServices.openUrl(QUrl.fromLocalFile(chemin))
+
+    def _bloom(self):
+        from .. import publication
+        dossier = QFileDialog.getExistingDirectory(self, "Dossier des fichiers pour Bloom")
+        if not dossier:
+            return
+        try:
+            fichiers = publication.exporter_bloom(self.projet, self.lecons, dossier)
+        except OSError as e:
+            erreur(self, "Bloom", "Les fichiers n'ont pas pu être écrits.", e)
+            return
+        info(self, "Bloom", "Fichiers créés pour l'outil « Decodable Reader » de Bloom :\n" + "\n".join(fichiers))
 
     def _exporter(self, extension):
         filtre = "Texte (*.txt)" if extension == "txt" else "CSV (*.csv)"

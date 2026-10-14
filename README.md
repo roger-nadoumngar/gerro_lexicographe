@@ -61,6 +61,7 @@ sans modifier l'original.
 | Syllabaire | Graphèmes du corpus, ordre d'enseignement justifié et réordonnable, mots et phrases de chaque leçon |
 | Validation | Propositions du moteur, avec les phrases qui les justifient |
 | Imports | Projet FLEx, projet Paratext (livres, glossaire, termes bibliques), LIFT, textes, USFM, Word/PDF, audio, domaines |
+| Exports | Dictionnaire imprimé (PDF, Word), dossier pour Dictionary App Builder (application Android), LIFT, JSON, CSV |
 | Corpus | Phrases parallèles ; import USFM / SFM, lecture Word / PDF, enregistrements audio |
 | Exports | LIFT (FLEx, WeSay, Dictionary App Builder), JSON, CSV, texte |
 
@@ -107,6 +108,7 @@ lexicographe/
   flex_import.py            import direct d'un projet FLEx (.fwdata), en lecture seule
   paratext.py               lecture des projets Paratext (livres, glossaire, termes bibliques)
   syllabaire.py             graphèmes, ordre d'enseignement, leçons (inspiré de PrimerPrep)
+  publication.py            dictionnaire PDF / Word, livret de syllabaire, Bloom, Dictionary App Builder
   textes.py                 textes du corpus, métadonnées, import de textes de terrain
   morphologie.py            analyseur morphologique à règles déclarées
   interlineaire.py          analyses validées, interlinéaire, inventaire, concordance

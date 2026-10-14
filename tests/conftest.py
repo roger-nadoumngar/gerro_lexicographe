@@ -6,6 +6,11 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Qt sans écran (offscreen) ne trouve pas les polices du système : sans elles, rien n'est dessiné
+# (PDF vides, tailles de texte nulles). On lui indique celles de Windows quand elles existent.
+if os.path.isdir(r"C:\Windows\Fonts"):
+    os.environ.setdefault("QT_QPA_FONTDIR", r"C:\Windows\Fonts")
+
 from lexicographe.projet import Projet  # noqa: E402
 
 

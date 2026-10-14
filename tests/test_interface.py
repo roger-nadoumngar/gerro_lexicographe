@@ -486,3 +486,24 @@ def test_page_syllabaire(fenetre, tmp_path, monkeypatch, messages):
     monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a, **k: (str(tmp_path / "s.txt"), ""))
     s._exporter("txt")
     assert "Leçon 1" in open(tmp_path / "s.txt", encoding="utf-8").read()
+
+
+def test_publication_depuis_les_exports(fenetre, tmp_path, monkeypatch, messages):
+    from PySide6.QtGui import QDesktopServices
+    from PySide6.QtWidgets import QFileDialog
+    from lexicographe.ui import pages
+    ouverts = []
+    monkeypatch.setattr(QDesktopServices, "openUrl", lambda url: ouverts.append(url.toLocalFile()))
+    monkeypatch.setattr(pages.DialoguePublication, "exec", lambda self: True)
+    lex = aller(fenetre, "Lexique")
+    _nouvelle_entree(lex, "kó", "arbre")
+    fenetre.projet.conn.execute("UPDATE entrees SET statut='validé'")
+    fenetre.projet.conn.commit()
+    e = aller(fenetre, "Exports")
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a, **k: (str(tmp_path / "dico.pdf"), ""))
+    e._publier("pdf", "PDF (*.pdf)", "exporter_pdf")
+    assert os.path.getsize(tmp_path / "dico.pdf") > 1000 and ouverts[-1].endswith("dico.pdf")
+    assert fenetre.projet.reglage("publication_titre").startswith("Dictionnaire")
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(tmp_path))
+    e._preparer_dab()
+    assert any(m[0] == "info" and "Dictionary App Builder" in m[2] for m in messages)

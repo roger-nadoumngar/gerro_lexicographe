@@ -138,7 +138,11 @@ def _date_lift(date):
     return (date.split(".")[0] + "Z") if date else None
 
 
-def construire_lift(projet):
+def construire_lift(projet, medias=None):
+    """`medias` (facultatif) : {id d'entrée: [(rôle, id de sens, nom de fichier)]} — sons écrits dans
+    <pronunciation><media>, images dans <sense><illustration>, chemins relatifs aux dossiers
+    audio/ et pictures/ placés à côté du fichier LIFT (convention FLEx et Dictionary App Builder)."""
+    medias = medias or {}
     lang_v = projet.reglage("langue_vern_code") or "und"
     lang_a = projet.reglage("langue_analyse_code") or "und"
     entrees = entrees_completes(projet)
@@ -158,9 +162,13 @@ def construire_lift(projet):
         _forme(el, "lexical-unit", lang_v, e.forme)
         if e.forme_citation:
             _forme(el, "citation", lang_v, e.forme_citation)
-        if e.prononciation:
+        sons = [f for role, _, f in medias.get(e.id, []) if role == "prononciation"]
+        if e.prononciation or sons:
             # convention FLEx : la prononciation (API) est écrite dans le système d'écriture « langue-fonipa »
-            _forme(el, "pronunciation", f"{lang_v}-fonipa", e.prononciation)
+            pron = (_forme(el, "pronunciation", f"{lang_v}-fonipa", e.prononciation) if e.prononciation
+                    else ET.SubElement(el, "pronunciation"))
+            for son in sons:
+                ET.SubElement(pron, "media", href=son)
         for v in e.variantes:
             var = _forme(ET.SubElement(el, "variant"), None, lang_v, v.forme)
             ET.SubElement(var, "trait", name="type", value=v.type)
@@ -204,6 +212,10 @@ def construire_lift(projet):
                 ET.SubElement(sens, "trait", name="semantic-domain-ddp4", value=f"{code} {nom}")
             if s.domaine:
                 ET.SubElement(sens, "trait", name="domaine-libre", value=s.domaine)
+            for role, sens_id, image in medias.get(e.id, []):
+                # une image liée à l'entrée sans sens précis va au premier sens
+                if role == "image" and (sens_id == s.id or (sens_id is None and n == 1)):
+                    ET.SubElement(sens, "illustration", href=image)
             for mot in lexique.formes_inverses(s):
                 _forme(ET.SubElement(sens, "reversal", type=lang_a), None, lang_a, mot)
     ET.indent(racine)
