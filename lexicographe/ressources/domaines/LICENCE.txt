@@ -1,0 +1,18 @@
+Domaines sémantiques (semdom-fr-en.json.gz)
+==========================================
+
+Liste des domaines sémantiques de SIL (Semantic Domains, version 4), par Ronald Moe
+et SIL Global : https://semdom.org
+
+Licence : Creative Commons Attribution - Partage dans les mêmes conditions 4.0
+International (CC BY-SA 4.0), https://creativecommons.org/licenses/by-sa/4.0/deed.fr
+
+Sources :
+- anglais : https://semdom.org/SemDom.xml (« licensed under a Creative Commons
+  Attribution-ShareAlike 4.0 International License by SIL Global ») ;
+- français : traduction de cette liste livrée avec SIL FieldWorks (Templates/
+  LocalizedLists-fr), adaptation de l'œuvre ci-dessus, partagée dans les mêmes conditions.
+
+Modification : les deux langues ont été réunies domaine par domaine dans un seul
+fichier JSON par Gerro Lexicographe (outils/construire_domaines.py). Ce fichier est
+distribué sous la même licence CC BY-SA 4.0.
