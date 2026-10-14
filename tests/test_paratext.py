@@ -136,3 +136,45 @@ def test_vrais_projets_paratext_intacts(projet):
     avant = _empreinte(p.dossier)
     paratext.importer_livres(projet, p, p.livres[:2], "vernaculaire")
     assert _empreinte(p.dossier) == avant
+
+
+# -- Bible complète : dossier ou archive, USFM ou USX ----------------------------------------------
+
+USX3 = """<?xml version="1.0" encoding="utf-8"?>
+<usx version="3.0"><book code="LUK" style="id">Luc</book>
+<para style="h">Luc</para>
+<chapter number="2" style="c" sid="LUK 2"/>
+<para style="s1">Naissance de Jésus</para>
+<para style="p"><verse number="1" style="v" sid="LUK 2:1"/>En ce temps-là parut un édit<note caller="+" style="f"><char style="ft">note</char></note> de César.<verse eid="LUK 2:1"/>
+<verse number="2" style="v" sid="LUK 2:2"/>Ce premier <char style="w">recensement</char> eut lieu.<verse eid="LUK 2:2"/></para>
+<chapter eid="LUK 2"/></usx>"""
+
+USX2 = """<usx version="2.0"><book code="RUT" style="id"/><chapter number="1" style="c"/>
+<para style="p"><verse number="1" style="v"/>Du temps des juges.<verse number="2-3" style="v"/>Le nom.</para></usx>"""
+
+
+def test_usx():
+    from lexicographe import usfm
+    versets, code = usfm.analyser_usx(USX3)
+    assert code == "LUK"
+    assert versets == {"LUK 2:1": "En ce temps-là parut un édit de César.", "LUK 2:2": "Ce premier recensement eut lieu."}
+    versets, _ = usfm.analyser_usx(USX2)
+    assert versets == {"RUT 1:1": "Du temps des juges.", "RUT 1:2": "Le nom."}
+
+
+def test_bible_complete_en_archive(projet, tmp_path):
+    import zipfile
+    from lexicographe import usfm
+    archive = tmp_path / "pdv.zip"
+    with zipfile.ZipFile(archive, "w") as z:
+        z.writestr("release/USX_1/LUK.usx", USX3)
+        z.writestr("release/USX_1/RUT.usx", USX2)
+        z.writestr("autres/01GEN.SFM", "\\id GEN\n\\c 1\n\\v 1 Au commencement.\n")
+        z.writestr("autres/01GEN.SFM.BAK", "\\id GEN\n\\c 1\n\\v 1 vieux\n")
+        z.writestr("metadata.xml", "<x/>")
+    livres = usfm.lire_bible(str(archive))
+    assert set(livres) == {"LUK", "RUT", "GEN"} and livres["GEN"] == {"GEN 1:1": "Au commencement."}
+    dossier = tmp_path / "dossier"
+    (dossier / "sous").mkdir(parents=True)
+    (dossier / "sous" / "LUK.usx").write_text(USX3, encoding="utf-8")
+    assert set(usfm.lire_bible(str(dossier))) == {"LUK"}

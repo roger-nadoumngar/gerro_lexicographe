@@ -92,6 +92,81 @@ def nettoyer(texte):
     return normaliser(texte)
 
 
+def analyser_usx(contenu):
+    """Versets d'un livre au format USX (XML de la Digital Bible Library), USX 2 ou 3.
+    Les notes, renvois et titres sont écartés. Retourne ({ref: texte}, code_livre)."""
+    import xml.etree.ElementTree as ET
+    racine = ET.fromstring(contenu)
+    livre = racine.find("book")
+    code = (livre.get("code") if livre is not None else "XXX").upper()
+    versets, chapitre, verset, morceaux = {}, None, None, []
+
+    def vider():
+        nonlocal morceaux
+        if chapitre is not None and verset is not None:
+            texte = normaliser(re.sub(r"\s+", " ", "".join(morceaux)).strip())
+            if texte:
+                versets[f"{code} {chapitre}:{verset}"] = texte
+        morceaux = []
+
+    def parcourir(el, dans_titre=False):
+        nonlocal chapitre, verset
+        for enfant in el:
+            balise = enfant.tag
+            if balise == "chapter" and enfant.get("number"):
+                vider()
+                chapitre, verset = int(enfant.get("number")), None
+            elif balise == "verse":
+                if enfant.get("number"):
+                    vider()
+                    verset = int(re.match(r"\d+", enfant.get("number")).group())
+                elif enfant.get("eid"):
+                    vider()
+                    verset = None
+            elif balise in ("note", "figure"):
+                pass   # notes et figures : pas dans le texte lu
+            elif balise == "para" and (enfant.get("style") or "").rstrip("0123456789") in (
+                    "s", "ms", "mr", "r", "d", "h", "toc", "mt", "cl", "ide", "rem"):
+                pass   # titres et en-têtes
+            else:
+                if verset is not None and enfant.text:
+                    morceaux.append(enfant.text)
+                parcourir(enfant)
+                if balise == "para" and verset is not None:
+                    morceaux.append(" ")
+            if enfant.tail and verset is not None:
+                morceaux.append(enfant.tail)
+    parcourir(racine)
+    vider()
+    return versets, code
+
+
+def lire_bible(chemin):
+    """Tous les livres d'un dossier ou d'une archive .zip (USFM .usfm/.sfm ou USX .usx), par
+    exemple un paquet de la Digital Bible Library. Retourne {code du livre: {ref: texte}}."""
+    import zipfile
+    fichiers = []   # (nom, lecture du contenu)
+    if os.path.isdir(chemin):
+        for dossier, _, noms in os.walk(chemin):
+            for nom in noms:
+                plein = os.path.join(dossier, nom)
+                fichiers.append((nom, lambda p=plein: open(p, "rb").read()))
+    else:
+        archive = zipfile.ZipFile(chemin)
+        for nom in archive.namelist():
+            fichiers.append((os.path.basename(nom), lambda n=nom: archive.read(n)))
+    livres = {}
+    for nom, lire in fichiers:
+        extension = os.path.splitext(nom)[1].lower()
+        if nom.upper().endswith(".BAK") or extension not in (".usfm", ".sfm", ".usx", ".ptx"):
+            continue
+        brut = lire().decode("utf-8-sig", errors="replace")
+        versets, code = analyser_usx(brut) if extension == ".usx" else analyser_usfm(brut, _code_depuis_nom(nom))
+        if versets:
+            livres.setdefault(code, {}).update(versets)
+    return livres
+
+
 def importer(projet, versets, cote, source):
     """Range des versets dans le corpus du projet. `cote` : 'vernaculaire' ou 'analyse'.
     Retourne (nouveaux, complétés)."""

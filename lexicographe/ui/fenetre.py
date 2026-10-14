@@ -1,5 +1,6 @@
 """Fenêtre principale : navigation à gauche, pages à droite."""
 
+import os
 
 from PySide6.QtCore import QSize, Qt, QUrl, Signal
 from PySide6.QtGui import QAction, QDesktopServices, QKeySequence
@@ -53,6 +54,10 @@ class FenetrePrincipale(QMainWindow):
              lexique_p._importer_lift),
             ("Texte de terrain (.txt)", "Conte, récit, conversation… avec sa traduction et ses informations "
                                         "(genre, locuteur, lieu, date).", textes_p._importer),
+            ("Bible complète (dossier ou archive .zip)", "Tous les livres d'un coup, en USFM ou en USX : par exemple "
+                                                         "un paquet de la Digital Bible Library ou les fichiers "
+                                                         "fournis par une Société biblique (PDV, français courant…).",
+             self._importer_bible),
             ("Livre biblique (USFM / SFM)", "Fichier Paratext ou autre, dans la langue du projet ou dans la "
                                             "langue d'analyse.", corpus_p._importer_usfm),
             ("Document Word ou PDF", "Lecture du texte pour en copier des phrases.", corpus_p._lire_document),
@@ -151,6 +156,47 @@ class FenetrePrincipale(QMainWindow):
         if getattr(page, "perime", True):
             page.rafraichir()
             page.perime = False
+
+    def _importer_bible(self):
+        from PySide6.QtWidgets import QFileDialog, QInputDialog
+        from .. import usfm
+        forme, ok = QInputDialog.getItem(self, "Bible complète", "La Bible est fournie sous forme de :",
+                                         ["archive .zip", "dossier"], 0, False)
+        if not ok:
+            return
+        if forme == "dossier":
+            chemin = QFileDialog.getExistingDirectory(self, "Dossier de la Bible (USFM ou USX)")
+        else:
+            chemin, _ = QFileDialog.getOpenFileName(self, "Archive de la Bible", "", "Archive (*.zip)")
+        if not chemin:
+            return
+        langues = [f"{self.projet.reglage('langue_vern_nom') or 'langue documentée'} (langue du projet)",
+                   f"{self.projet.reglage('langue_analyse_nom') or 'langue d’analyse'} (traduction)"]
+        cote, ok = QInputDialog.getItem(self, "Bible complète", "Cette Bible est en :", langues, 1, False)
+        if not ok:
+            return
+        try:
+            self.projet.sauvegarde_automatique()
+            with CurseurAttente():
+                livres = usfm.lire_bible(chemin)
+                if not livres:
+                    raise ValueError("Aucun livre USFM (.usfm, .sfm) ni USX (.usx) trouvé à cet endroit.")
+                nouveaux = completes = 0
+                with self.projet.en_lot():
+                    for code, versets in livres.items():
+                        n, c = usfm.importer(self.projet, versets, "vernaculaire" if cote == langues[0] else "analyse",
+                                             os.path.basename(chemin.rstrip("/\\")))
+                        nouveaux, completes = nouveaux + n, completes + c
+                alignement.recalculer(self.projet)
+        except Exception as e:
+            erreur(self, "Bible complète", "L'import n'a pas abouti. Le projet a été sauvegardé juste avant.", e)
+            return
+        self.rafraichir_tout()
+        paires = self.projet.conn.execute("SELECT COUNT(*) FROM phrases WHERE vernaculaire IS NOT NULL "
+                                          "AND analyse IS NOT NULL").fetchone()[0]
+        info(self, "Bible complète", f"{len(livres)} livre(s), {nouveaux + completes} versets "
+                                     f"({nouveaux} nouveaux, {completes} complétés).\n"
+                                     f"Le corpus compte {paires} phrase(s) dans les deux langues.")
 
     def _fusionner(self):
         from PySide6.QtWidgets import QFileDialog

@@ -397,7 +397,7 @@ def test_page_imports_et_menu(fenetre, monkeypatch):
     imports = aller(fenetre, "Imports")
     from PySide6.QtWidgets import QPushButton
     textes = [b.text() for b in imports.findChildren(QPushButton)]
-    assert textes.count("Importer…") == 9
+    assert textes.count("Importer…") == 10
     menu = [a.text() for a in fenetre.menuBar().actions()[0].menu().actions()]
     assert "Importer un projet FLEx…" in menu and "Tous les imports…" in menu
     appels = []
@@ -605,3 +605,23 @@ def test_traits_dans_la_fiche(fenetre, messages):
     valeur.setEditText("H")
     eid = ed.enregistrer()
     assert lexique.lire_entree(fenetre.projet.conn, eid).proprietes == {"ton": "H"}
+
+
+def test_import_bible_complete(fenetre, tmp_path, monkeypatch, messages):
+    import zipfile
+    from PySide6.QtWidgets import QFileDialog, QInputDialog
+    from tests.test_paratext import USX2
+    archive = tmp_path / "bible.zip"
+    with zipfile.ZipFile(archive, "w") as z:
+        z.writestr("RUT.usx", USX2)
+    reponses = iter([("archive .zip", True), (None, True)])
+
+    def choix(parent, titre, texte, items, *a, **k):
+        valeur, ok = next(reponses)
+        return (valeur or items[1]), ok
+    monkeypatch.setattr(QInputDialog, "getItem", choix)
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **k: (str(archive), ""))
+    fenetre._importer_bible()
+    assert fenetre.projet.conn.execute("SELECT analyse FROM phrases WHERE ref='RUT 1:1'").fetchone()[0] == \
+        "Du temps des juges."
+    assert any(m[0] == "info" and "1 livre(s)" in m[2] for m in messages)
