@@ -151,3 +151,165 @@ def position_enregistree(projet):
 def enregistrer_position(projet, guid, numero):
     """Reprise de la collecte là où elle s'est arrêtée."""
     projet.definir_reglages({"collecte_position": json.dumps({"guid": guid, "numero": numero})})
+
+
+# -- collecte à partir d'une liste de mots (comme la liste de mots de WeSay) ------------------
+#
+# Règles :
+# * une liste est une suite de mots de la langue d'analyse, éventuellement rangés par groupe
+#   (« Mammifères », « Oiseaux »…) ; elle est gardée dans le projet ;
+# * un mot de la liste est « trouvé » quand une entrée a un sens dont la glose, découpée aux
+#   virgules et points-virgules (hors parenthèses), contient exactement ce mot ;
+# * répondre crée une entrée brouillon dont la glose est le mot de la liste ; si une entrée de même
+#   forme existe, la glose lui est ajoutée comme nouveau sens au lieu de créer un doublon.
+
+@dataclass
+class ElementListe:
+    mot: str
+    groupe: str = ""
+
+
+def segments_glose(glose):
+    """« bovin; boeuf, vache » → {"bovin", "boeuf", "vache"} ; le contenu des parenthèses et
+    crochets est ignoré (« piquer (scorpion, fourmi) » ne contient pas « fourmi »)."""
+    import re
+    from .dico_imprime import cle_glose
+    texte = re.sub(r"\([^)]*\)", " ", cle_glose(glose))
+    return {" ".join(s.split()) for s in re.split(r"[;,]", texte) if s.strip()}
+
+
+def lire_liste(chemin):
+    """Mots d'une liste Word (.docx : lignes « 1⇥eau⇥… » ou tableaux « N° | Nom commun | … »,
+    titres « 1. Mammifères (25) » pris comme groupes) ou texte (.txt, .csv : une ligne par mot,
+    colonnes séparées par tabulation, point-virgule ou virgule ; un numéro en tête est ignoré)."""
+    import os
+    import re
+    titre_groupe = re.compile(r"^\d+\.\s+(.+?)\s*\(\d+\)\s*$")
+    elements, groupe = [], ""
+
+    def ajouter_ligne(colonnes):
+        colonnes = [normaliser(c).strip() for c in colonnes]
+        colonnes = [c for c in colonnes if c]
+        if colonnes and re.fullmatch(r"[\d.]+|N°|No|ID", colonnes[0], re.I):
+            colonnes = colonnes[1:]
+        if not colonnes or colonnes[0].lower() in ("français", "francais", "nom commun", "mot", "english"):
+            return
+        elements.append(ElementListe(colonnes[0], groupe))
+
+    if os.path.splitext(chemin)[1].lower() == ".docx":
+        import docx
+        from docx.table import Table
+        from docx.text.paragraph import Paragraph
+        document = docx.Document(chemin)
+        for bloc in document.element.body.iterchildren():
+            if bloc.tag.endswith("}p"):
+                texte = Paragraph(bloc, document).text
+                m = titre_groupe.match(texte.strip())
+                if m:
+                    groupe = m.group(1)
+                elif "\t" in texte and re.match(r"\s*\d+\s*\t", texte):
+                    ajouter_ligne(texte.split("\t"))
+            elif bloc.tag.endswith("}tbl"):
+                for rangee in Table(bloc, document).rows:
+                    ajouter_ligne([c.text for c in rangee.cells])
+    else:
+        with open(chemin, encoding="utf-8-sig", errors="replace") as f:
+            for ligne in f:
+                if ligne.strip():
+                    m = titre_groupe.match(ligne.strip())
+                    if m:
+                        groupe = m.group(1)
+                        continue
+                    separateur = "\t" if "\t" in ligne else ";" if ";" in ligne else ","
+                    ajouter_ligne(ligne.rstrip("\n").split(separateur))
+    # une liste ne contient pas deux fois le même mot
+    vus, uniques = set(), []
+    for e in elements:
+        if e.mot.lower() not in vus:
+            vus.add(e.mot.lower())
+            uniques.append(e)
+    return uniques
+
+
+def listes(projet):
+    try:
+        brut = json.loads(projet.reglage("listes_collecte") or "{}")
+    except ValueError:
+        return {}
+    return {nom: [ElementListe(*e) for e in elements] for nom, elements in brut.items()}
+
+
+def enregistrer_liste(projet, nom, elements):
+    toutes = listes(projet)
+    toutes[nom] = elements
+    projet.definir_reglages({"listes_collecte": json.dumps(
+        {n: [[e.mot, e.groupe] for e in els] for n, els in toutes.items()}, ensure_ascii=False)})
+
+
+def supprimer_liste(projet, nom):
+    toutes = listes(projet)
+    toutes.pop(nom, None)
+    projet.definir_reglages({"listes_collecte": json.dumps(
+        {n: [[e.mot, e.groupe] for e in els] for n, els in toutes.items()}, ensure_ascii=False)})
+
+
+def index_des_gloses(conn):
+    """{segment de glose: [(id de l'entrée, forme)]} pour savoir vite quels mots sont trouvés."""
+    index = {}
+    for eid, forme, glose in conn.execute(
+            "SELECT e.id, e.forme, s.glose FROM entrees e JOIN sens s ON s.entree_id = e.id ORDER BY e.id"):
+        for seg in segments_glose(glose):
+            if (eid, forme) not in index.setdefault(seg, []):
+                index[seg].append((eid, forme))
+    return index
+
+
+def trouves(conn, mot, index=None):
+    from .dico_imprime import cle_glose
+    index = index if index is not None else index_des_gloses(conn)
+    return index.get(cle_glose(mot), [])
+
+
+def avancement(conn, elements):
+    index = index_des_gloses(conn)
+    return sum(1 for e in elements if trouves(conn, e.mot, index))
+
+
+def repondre_liste(conn, element, forme, nom_liste=""):
+    """La forme donnée pour un mot de la liste. Retourne (id de l'entrée, créée ?)."""
+    forme = normaliser(forme).strip()
+    if not forme:
+        raise ValueError("Le mot est vide.")
+    glose = normaliser(element.mot).strip()
+    cible = forme.lower()
+    for eid, f, c in conn.execute("SELECT id, forme, forme_citation FROM entrees ORDER BY id").fetchall():
+        if normaliser(f).lower() == cible or normaliser(c or "").lower() == cible:
+            entree = lexique.lire_entree(conn, eid)
+            if not any(glose.lower() in {x.lower() for x in segments_glose(s.glose)} for s in entree.sens):
+                vide = next((s for s in entree.sens if not s.glose.strip()), None)
+                if vide:
+                    vide.glose = glose
+                else:
+                    entree.sens.append(Sens(glose=glose))
+                lexique.enregistrer_entree(conn, entree)
+            return eid, False
+    note = f"Collecte : liste « {nom_liste} »" + (f", {element.groupe}" if element.groupe else "") if nom_liste else ""
+    eid = lexique.enregistrer_entree(conn, Entree(forme=forme, statut="brouillon", notes=note,
+                                                  sens=[Sens(glose=glose)]))
+    return eid, True
+
+
+def position_liste(projet, nom):
+    try:
+        return int(json.loads(projet.reglage("listes_collecte_position") or "{}").get(nom, 0))
+    except (ValueError, TypeError):
+        return 0
+
+
+def enregistrer_position_liste(projet, nom, index):
+    try:
+        positions = json.loads(projet.reglage("listes_collecte_position") or "{}")
+    except ValueError:
+        positions = {}
+    positions[nom] = index
+    projet.definir_reglages({"listes_collecte_position": json.dumps(positions, ensure_ascii=False)})

@@ -13,6 +13,15 @@ if os.path.isdir(r"C:\Windows\Fonts"):
 
 from lexicographe.projet import Projet  # noqa: E402
 
+# le corpus d'exemple (Ruth et Job, ngambay–français) n'est pas livré avec le logiciel : les tests
+# le trouvent dans tests/donnees
+DONNEES_TEST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "donnees")
+
+
+@pytest.fixture(autouse=True)
+def corpus_de_test(monkeypatch):
+    monkeypatch.setattr("lexicographe.chemins._base_ressources", lambda: DONNEES_TEST)
+
 
 @pytest.fixture
 def projet(tmp_path):

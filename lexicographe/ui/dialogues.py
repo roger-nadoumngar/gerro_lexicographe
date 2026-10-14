@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, 
                                QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QPlainTextEdit, QPushButton, QSpinBox, QTabWidget, QVBoxLayout, QWidget)
 
-from .. import APP_NAME, lexique, traits
+from .. import APP_NAME, corpus, lexique, traits
 from ..chemins import anciennes_bases
 from ..projet import EXTENSION, lister_projets
 from .commun import confirmer, erreur, titre
@@ -29,7 +29,9 @@ class DialogueNouveauProjet(QDialog):
         self.code_analyse.setMaxLength(8)
         self.corpus = QCheckBox("Charger le corpus d'exemple Ruth et Job (ngambay–français)")
         self.corpus.setEnabled(False)
-        self.code.textChanged.connect(lambda t: self.corpus.setEnabled(t.strip().lower() == "sba"))
+        self.corpus.setVisible(corpus.disponible("ngambay_ruth_job"))
+        self.code.textChanged.connect(lambda t: self.corpus.setEnabled(t.strip().lower() == "sba"
+                                                                     and corpus.disponible("ngambay_ruth_job")))
         aide = QLabel("Code ISO 639-3 de la langue : voir <a href='https://www.ethnologue.com'>ethnologue.com</a>. "
                       "Il identifie la langue dans les exports LIFT (FLEx, WeSay, applications).")
         aide.setOpenExternalLinks(True)

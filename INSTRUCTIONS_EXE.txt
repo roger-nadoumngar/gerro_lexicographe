@@ -34,7 +34,8 @@ Attends la fin (quelques minutes). Le fichier est créé dans le dossier
 
     dist\GerroLexicographe.exe
 
-Le corpus d'exemple est inclus dans le .exe. Tu peux copier le .exe
+Le .exe ne contient aucune donnée de langue : chaque linguiste crée son
+projet. Tu peux copier le .exe
 n'importe où et en faire un raccourci.
 
 

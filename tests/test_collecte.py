@@ -113,3 +113,54 @@ def test_fusion(projet, tmp_path):
 def test_fusion_refuse_le_projet_lui_meme(projet):
     with pytest.raises(ValueError):
         fusion.fusionner(projet, projet.chemin)
+
+
+# -- collecte à partir d'une liste de mots ------------------------------------------------------
+
+def _liste_word(chemin):
+    import docx
+    d = docx.Document()
+    d.add_paragraph("ID\tFrançais\tNgambay")
+    d.add_paragraph("1\teau\t")
+    d.add_paragraph("2\tfeu\t")
+    d.add_paragraph("1. Mammifères (2)")
+    t = d.add_table(rows=3, cols=3)
+    for i, (n, mot) in enumerate([("N°", "Nom commun"), ("1", "Lion"), ("2", "Eau")]):
+        t.cell(i, 0).text, t.cell(i, 1).text = n, mot
+    d.save(chemin)
+
+
+def test_lire_une_liste(tmp_path):
+    chemin = str(tmp_path / "liste.docx")
+    _liste_word(chemin)
+    assert [(e.mot, e.groupe) for e in collecte.lire_liste(chemin)] == [
+        ("eau", ""), ("feu", ""), ("Lion", "Mammifères")], "en-têtes ignorés, doublon « Eau » retiré"
+    texte = tmp_path / "liste.txt"
+    texte.write_text("Français;Anglais\n1;main;hand\npied;foot\n", encoding="utf-8")
+    assert [e.mot for e in collecte.lire_liste(str(texte))] == ["main", "pied"]
+
+
+def test_segments_de_glose():
+    assert collecte.segments_glose("bovin; boeuf, vache") == {"bovin", "boeuf", "vache"}
+    assert collecte.segments_glose("piquer (scorpion, fourmi, etc.)") == {"piquer"}
+
+
+def test_repondre_a_une_liste(projet):
+    conn = projet.conn
+    feu = lexique.enregistrer_entree(conn, Entree(forme="pə̀r", sens=[Sens(glose="feu")]))
+    elements = [collecte.ElementListe("eau"), collecte.ElementListe("feu"), collecte.ElementListe("lion", "Mammifères")]
+    collecte.enregistrer_liste(projet, "Swadesh", elements)
+    assert collecte.listes(projet)["Swadesh"][2].groupe == "Mammifères"
+    assert collecte.avancement(conn, elements) == 1
+    assert collecte.trouves(conn, "Feu") == [(feu, "pə̀r")]
+    eid, cree = collecte.repondre_liste(conn, elements[0], "màn̄", "Swadesh")
+    assert cree and "Swadesh" in lexique.lire_entree(conn, eid).notes
+    assert collecte.repondre_liste(conn, elements[0], "Màn̄", "Swadesh") == (eid, False), "pas de doublon"
+    assert [s.glose for s in lexique.lire_entree(conn, eid).sens] == ["eau"]
+    collecte.repondre_liste(conn, elements[2], "pə̀r", "Swadesh")
+    assert [s.glose for s in lexique.lire_entree(conn, feu).sens] == ["feu", "lion"], "nouveau sens, même entrée"
+    assert collecte.avancement(conn, elements) == 3
+    collecte.enregistrer_position_liste(projet, "Swadesh", 2)
+    assert collecte.position_liste(projet, "Swadesh") == 2
+    collecte.supprimer_liste(projet, "Swadesh")
+    assert collecte.listes(projet) == {}

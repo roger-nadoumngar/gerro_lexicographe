@@ -6,11 +6,11 @@ from datetime import datetime
 
 from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import (QDialog, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget,
-                               QPushButton, QStackedWidget, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QComboBox, QDialog, QFileDialog, QFrame, QGridLayout, QHBoxLayout, QInputDialog,
+                               QLabel, QLineEdit, QListWidget, QPushButton, QStackedWidget, QVBoxLayout, QWidget)
 
 from .. import collecte, domaines, lexique
-from .commun import carte, erreur
+from .commun import carte, confirmer, erreur, info
 from .domaines_ui import DialogueDomaine
 from .pages import Page
 
@@ -377,6 +377,169 @@ class TacheFiche(QWidget):
         self._afficher()
 
 
+class CollecteListe(QWidget):
+    """Un mot de la liste à la fois (langue d'analyse) ; le mot donné dans la langue devient une entrée."""
+    retour = Signal()
+    modifie = Signal()
+
+    def __init__(self, projet, parent=None):
+        super().__init__(parent)
+        self.projet = projet
+        self.elements = []
+        self.index = 0
+        self.index_gloses = {}
+        v = QVBoxLayout(self)
+        haut = QHBoxLayout()
+        retour = QPushButton("← Tâches")
+        retour.clicked.connect(self.retour)
+        self.choix = QComboBox()
+        self.choix.setMinimumWidth(220)
+        self.choix.currentTextChanged.connect(self._changer_liste)
+        importer = QPushButton("Importer une liste…")
+        importer.clicked.connect(self._importer)
+        self.retirer = QPushButton("Retirer la liste")
+        self.retirer.clicked.connect(self._retirer)
+        self.position = QLabel("")
+        self.position.setObjectName("sousTitre")
+        for w in (retour, QLabel("Liste :"), self.choix, importer, self.retirer):
+            haut.addWidget(w)
+        haut.addStretch()
+        haut.addWidget(self.position)
+        v.addLayout(haut)
+        self.groupe = QLabel("")
+        self.groupe.setObjectName("sousTitre")
+        self.mot_liste = _Grand("", 2.4)
+        self.connus = QLabel("")
+        self.connus.setWordWrap(True)
+        self.consigne = _Grand("", 1.3, gras=False)
+        for w in (self.groupe, self.mot_liste, self.connus, self.consigne):
+            v.addWidget(w)
+        saisie = QHBoxLayout()
+        self.mot = QLineEdit()
+        self.mot.setPlaceholderText("mot dans la langue")
+        police = QFont(self.mot.font())
+        police.setPointSizeF(police.pointSizeF() * 1.5)
+        self.mot.setFont(police)
+        self.mot.returnPressed.connect(self._ajouter)
+        self.btn_ajouter = QPushButton("Ajouter")
+        self.btn_ajouter.setObjectName("principal")
+        self.btn_ajouter.clicked.connect(self._ajouter)
+        saisie.addWidget(self.mot, 1)
+        saisie.addWidget(self.btn_ajouter)
+        v.addLayout(saisie)
+        self.enregistreur = Enregistreur(projet)
+        v.addWidget(self.enregistreur)
+        v.addStretch()
+        nav = QHBoxLayout()
+        for texte, action in (("◀ Mot précédent", lambda: self._aller_a(self.index - 1)),
+                              ("Mot suivant ▶", lambda: self._aller_a(self.index + 1)),
+                              ("Prochain mot non trouvé ▶▶", self._prochain_manquant)):
+            b = QPushButton(texte)
+            b.clicked.connect(action)
+            nav.addWidget(b)
+        v.addLayout(nav)
+
+    def demarrer(self, nom=None):
+        noms = list(collecte.listes(self.projet))
+        self.choix.blockSignals(True)
+        self.choix.clear()
+        self.choix.addItems(noms)
+        self.choix.blockSignals(False)
+        if nom in noms:
+            self.choix.setCurrentText(nom)
+        self._changer_liste(self.choix.currentText())
+
+    def _changer_liste(self, nom):
+        self.elements = collecte.listes(self.projet).get(nom, [])
+        self.index_gloses = collecte.index_des_gloses(self.projet.conn)
+        self.index = min(collecte.position_liste(self.projet, nom), max(0, len(self.elements) - 1))
+        self.retirer.setEnabled(bool(nom))
+        self._afficher()
+
+    def _afficher(self):
+        nom = self.choix.currentText()
+        actifs = bool(self.elements)
+        for w in (self.mot, self.btn_ajouter):
+            w.setEnabled(actifs)
+        if not actifs:
+            self.mot_liste.setText("Aucune liste")
+            self.groupe.setText("")
+            self.connus.setText("Importe une liste de mots (Word ou texte) : une ligne ou une rangée de tableau "
+                                "par mot, par exemple « 1 ⇥ eau ».")
+            self.consigne.setText("")
+            self.position.setText("")
+            self.enregistreur.pour_entree(None)
+            return
+        e = self.elements[self.index]
+        collecte.enregistrer_position_liste(self.projet, nom, self.index)
+        trouves = sum(1 for x in self.elements if collecte.trouves(self.projet.conn, x.mot, self.index_gloses))
+        self.position.setText(f"mot {self.index + 1} sur {len(self.elements)} · {trouves} trouvé(s)")
+        self.groupe.setText(e.groupe)
+        self.mot_liste.setText(e.mot)
+        deja = collecte.trouves(self.projet.conn, e.mot, self.index_gloses)
+        self.connus.setText("Déjà dans le lexique : " + ", ".join(f for _, f in deja) if deja
+                            else "Pas encore dans le lexique.")
+        langue = self.projet.reglage("langue_vern_nom") or "la langue"
+        self.consigne.setText(f"Comment dit-on « {e.mot} » en {langue} ?")
+        self.enregistreur.pour_entree(deja[0][0] if deja else None)
+        self.mot.clear()
+        self.mot.setFocus()
+
+    def _aller_a(self, index):
+        if self.elements:
+            self.enregistreur.arreter()
+            self.index = max(0, min(index, len(self.elements) - 1))
+            self._afficher()
+
+    def _prochain_manquant(self):
+        for i in list(range(self.index + 1, len(self.elements))) + list(range(0, self.index + 1)):
+            if not collecte.trouves(self.projet.conn, self.elements[i].mot, self.index_gloses):
+                self._aller_a(i)
+                return
+        info(self, "Liste de mots", "Tous les mots de cette liste sont trouvés ✓")
+
+    def _ajouter(self):
+        if not self.elements or not self.mot.text().strip():
+            return
+        try:
+            eid, _ = collecte.repondre_liste(self.projet.conn, self.elements[self.index], self.mot.text(),
+                                             self.choix.currentText())
+        except ValueError as e:
+            erreur(self, "Liste de mots", str(e))
+            return
+        self.index_gloses = collecte.index_des_gloses(self.projet.conn)
+        self.modifie.emit()
+        self._afficher()
+        self.enregistreur.pour_entree(eid)
+
+    def _importer(self):
+        chemin, _ = QFileDialog.getOpenFileName(self, "Liste de mots", "",
+                                                "Word ou texte (*.docx *.txt *.csv);;Tous les fichiers (*)")
+        if not chemin:
+            return
+        try:
+            elements = collecte.lire_liste(chemin)
+        except Exception as e:
+            erreur(self, "Liste de mots", "La liste n'a pas pu être lue.", e)
+            return
+        if not elements:
+            erreur(self, "Liste de mots", "Aucun mot trouvé dans ce fichier.")
+            return
+        nom, ok = QInputDialog.getText(self, "Liste de mots", f"{len(elements)} mot(s). Nom de la liste :",
+                                       text=os.path.splitext(os.path.basename(chemin))[0].strip())
+        if not ok or not nom.strip():
+            return
+        collecte.enregistrer_liste(self.projet, nom.strip(), elements)
+        self.demarrer(nom.strip())
+
+    def _retirer(self):
+        nom = self.choix.currentText()
+        if nom and confirmer(self, "Liste de mots", f"Retirer la liste « {nom} » ? Les mots déjà collectés "
+                                                    "restent dans le lexique."):
+            collecte.supprimer_liste(self.projet, nom)
+            self.demarrer()
+
+
 class Collecte(QWidget):
     """Accueil des tâches + écrans de collecte (réutilisé par le mode locuteur)."""
     modifie = Signal()
@@ -394,7 +557,10 @@ class Collecte(QWidget):
         self.cartes = {}
         taches = [("domaine_collecte", "Collecter des mots par domaine",
                    "Une question à la fois (« Quels mots désignent les parties du corps ? ») ; chaque mot donné "
-                   "devient une entrée classée dans ce domaine.")] + \
+                   "devient une entrée classée dans ce domaine."),
+                  ("liste_collecte", "Collecter à partir d'une liste de mots",
+                   "Un mot français à la fois (« eau », « feu », « lion »…) : le locuteur donne le mot dans sa "
+                   "langue. Les mots déjà présents dans le lexique sont montrés.")] + \
                  [(t, nom, aide) for t, (nom, aide) in collecte.TACHES.items()]
         for i, (cle, nom, aide) in enumerate(taches):
             c = carte()
@@ -415,18 +581,27 @@ class Collecte(QWidget):
         self.pile.addWidget(accueil)
         self.par_domaine = CollecteDomaine(projet)
         self.fiche = TacheFiche(projet)
-        for ecran in (self.par_domaine, self.fiche):
+        self.par_liste = CollecteListe(projet)
+        for ecran in (self.par_domaine, self.fiche, self.par_liste):
             ecran.retour.connect(self.accueil)
             ecran.modifie.connect(self.modifie)
             self.pile.addWidget(ecran)
 
     def accueil(self):
-        for ecran in (self.par_domaine, self.fiche):
+        for ecran in (self.par_domaine, self.fiche, self.par_liste):
             ecran.enregistreur.arreter()
         comptes = collecte.compter(self.projet.conn)
         nb_dom = domaines.nombre(self.projet.conn)
         self.cartes["domaine_collecte"].setText(f"{nb_dom} domaines" if nb_dom else
                                                 "aucune liste de domaines dans ce projet")
+        les_listes = collecte.listes(self.projet)
+        if les_listes:
+            total = sum(len(els) for els in les_listes.values())
+            trouves = sum(collecte.avancement(self.projet.conn, els) for els in les_listes.values())
+            self.cartes["liste_collecte"].setText(f"{len(les_listes)} liste(s) : {trouves} mot(s) trouvé(s) "
+                                                  f"sur {total}")
+        else:
+            self.cartes["liste_collecte"].setText("aucune liste : importe-la depuis cet écran")
         for t, n in comptes.items():
             self.cartes[t].setText(f"{n} à faire" if n else "rien à faire ✓")
         self.pile.setCurrentIndex(0)
@@ -435,6 +610,9 @@ class Collecte(QWidget):
         if cle == "domaine_collecte":
             self.pile.setCurrentWidget(self.par_domaine)
             self.par_domaine.demarrer()
+        elif cle == "liste_collecte":
+            self.pile.setCurrentWidget(self.par_liste)
+            self.par_liste.demarrer()
         else:
             self.pile.setCurrentWidget(self.fiche)
             self.fiche.demarrer(cle)
