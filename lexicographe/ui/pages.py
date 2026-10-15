@@ -143,6 +143,18 @@ class PageTableauDeBord(Page):
             self.chiffres[cle] = chiffre
         self.racine.addLayout(grille)
 
+        # lettres d'un autre alphabet (у cyrillique pour y…) : signalées, corrigées à la demande
+        self.ligne_sosies = QWidget()
+        h = QHBoxLayout(self.ligne_sosies)
+        h.setContentsMargins(0, 8, 0, 0)
+        self.texte_sosies = QLabel("")
+        self.texte_sosies.setWordWrap(True)
+        corriger = QPushButton("Voir et corriger…")
+        corriger.clicked.connect(self._corriger_sosies)
+        h.addWidget(self.texte_sosies, 1)
+        h.addWidget(corriger)
+        self.racine.addWidget(self.ligne_sosies)
+
         self.racine.addSpacing(14)
         self.racine.addWidget(QLabel("<b>Contradictions détectées</b>"))
         aide = QLabel("Un mot validé dont la traduction semble contredite par de nouvelles phrases. "
@@ -169,6 +181,12 @@ class PageTableauDeBord(Page):
         stats = lexique.statistiques(self.projet.conn)
         for cle, label in self.chiffres.items():
             label.setText(f"{stats[cle]:,}".replace(",", " "))
+        from .. import controles
+        self.sosies = controles.trouver(self.projet.conn)
+        self.ligne_sosies.setVisible(bool(self.sosies))
+        self.texte_sosies.setText(f"⚠ {len(self.sosies)} mot(s) ou phrase(s) contiennent des lettres d'un autre "
+                                  "alphabet qui imitent des lettres latines (par exemple у cyrillique pour y) : "
+                                  "le tri et la recherche ne les trouvent pas.")
         self.contradictions.clear()
         lignes = alignement.contradictions_ouvertes(self.projet)
         if not lignes:
@@ -180,6 +198,22 @@ class PageTableauDeBord(Page):
                                    f"les phrases suggèrent maintenant « {nouvelle} »")
             item.setData(Qt.UserRole, cid)
             self.contradictions.addItem(item)
+
+    def _corriger_sosies(self):
+        from .. import controles
+        if not self.sosies:
+            return
+        exemples = "\n".join(f"  {o.avant[:50]}  →  {o.apres[:50]}" for o in self.sosies[:12])
+        suite = f"\n  … et {len(self.sosies) - 12} autre(s)" if len(self.sosies) > 12 else ""
+        if not confirmer(self, "Lettres d'un autre alphabet",
+                         f"Chaque lettre cyrillique ou grecque est remplacée par la lettre latine qu'elle imite, "
+                         f"seulement dans les mots qui contiennent aussi des lettres latines :\n\n{exemples}{suite}\n\n"
+                         "Le projet est sauvegardé avant. Corriger ?"):
+            return
+        self.projet.sauvegarde_automatique()
+        n = controles.corriger(self.projet.conn, self.sosies)
+        self.donnees_modifiees.emit()
+        info(self, "Lettres d'un autre alphabet", f"{n} correction(s) faite(s).")
 
     def _resoudre(self, adopter):
         item = self.contradictions.currentItem()
@@ -957,6 +991,10 @@ class PageExports(Page):
         self._carte("Application Android (Dictionary App Builder)",
                     "Dossier prêt à importer dans Dictionary App Builder (SIL) : le dictionnaire au format LIFT avec "
                     "ses sons et ses images, et le mode d'emploi.", "Préparer…", self._preparer_dab)
+        self._carte("Clavier Keyman", "Clavier pour taper la langue sur Windows, macOS et Linux (AZERTY ou "
+                                      "QWERTY), calculé d'après l'alphabet et le lexique du projet : lettre + ; "
+                                      "(b; → ɓ), tons après la lettre avec = (a=h → á). Paquet installable si "
+                                      "Keyman Developer est présent, et aide imprimable.", "Créer…", self._clavier)
         for nom, extension, filtre, fonction, aide in self.FORMATS:
             self._carte(nom, aide, "Exporter…",
                         lambda _=False, e=extension, f=filtre, fn=fonction: self._exporter(e, f, fn))
@@ -1018,6 +1056,33 @@ class PageExports(Page):
         info(self, "Application Android", "Dossier prêt pour Dictionary App Builder :\n"
                                           f"{os.path.dirname(lift)}\n\nLis le fichier LISEZ-MOI.txt qu'il contient.")
         QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.dirname(lift)))
+
+    def _clavier(self):
+        from .. import clavier
+        dossier = QFileDialog.getExistingDirectory(self, "Dossier où créer le clavier",
+                                                   os.path.join(os.path.expanduser("~"), "Documents"))
+        if not dossier:
+            return
+        try:
+            with CurseurAttente():
+                r = clavier.generer(self.projet, dossier)
+        except Exception as e:
+            erreur(self, "Clavier Keyman", "Le clavier n'a pas pu être créé.", e)
+            return
+        inv = r.inventaire
+        texte = ("Lettres : " + ", ".join(f"{l.sequence} → {l.caractere}" for l in inv.lettres) +
+                 "\nSignes (après la lettre) : " + ", ".join(f"={s.code} {s.nom}" for s in inv.signes))
+        if inv.sans_base:
+            texte += "\n\nCaractères sans touche (à vérifier dans les données) : " + " ".join(inv.sans_base)
+        if r.message:
+            texte += "\n\n" + r.message
+        QDesktopServices.openUrl(QUrl.fromLocalFile(r.aide))
+        if r.paquet:
+            if confirmer(self, "Clavier Keyman", f"{texte}\n\nPaquet prêt :\n{r.paquet}\n\n"
+                                                 "L'installer maintenant dans Keyman ?"):
+                QDesktopServices.openUrl(QUrl.fromLocalFile(r.paquet))
+        else:
+            info(self, "Clavier Keyman", f"{texte}\n\nFichiers dans :\n{r.dossier}")
 
     def _exporter(self, extension, filtre, fonction):
         nom = f"{self.projet.nom}.{extension}"

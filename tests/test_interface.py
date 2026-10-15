@@ -546,6 +546,34 @@ def _domaines_test(projet):
                                          "descriptions": {}, "questions": []}])
 
 
+def test_lettres_d_un_autre_alphabet(fenetre, messages):
+    from lexicographe.lexique import Entree, Sens
+    lexique.enregistrer_entree(fenetre.projet.conn, Entree(forme="dу", sens=[Sens(glose="x")]))
+    page = aller(fenetre, "Tableau de bord")
+    page.rafraichir()
+    assert not page.ligne_sosies.isHidden() and "1 mot" in page.texte_sosies.text()
+    page._corriger_sosies()
+    assert lexique.chercher_par_forme(fenetre.projet.conn, "dy")
+    page.rafraichir()
+    assert page.ligne_sosies.isHidden()
+
+
+def test_clavier_keyman(fenetre, tmp_path, monkeypatch, messages):
+    from PySide6.QtGui import QDesktopServices
+    from PySide6.QtWidgets import QFileDialog
+    from lexicographe.lexique import Entree, Sens
+    for _ in range(10):
+        lexique.enregistrer_entree(fenetre.projet.conn, Entree(forme="ɓá", sens=[Sens(glose="x")]))
+    ouverts = []
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(tmp_path))
+    monkeypatch.setattr(QDesktopServices, "openUrl", lambda url: ouverts.append(url.toLocalFile()) or True)
+    page = aller(fenetre, "Exports")
+    page._clavier()
+    assert not [m for m in messages if m[0] == "erreur"], messages
+    assert any(chemin.endswith("welcome.htm") for chemin in ouverts), "l'aide s'ouvre"
+    assert os.path.isfile(os.path.join(str(tmp_path), "gerro_ngambay", "gerro_ngambay.kmn"))
+
+
 def test_collecte_par_liste(fenetre, tmp_path, monkeypatch):
     from PySide6.QtWidgets import QFileDialog, QInputDialog
     from tests.test_collecte import _liste_word
