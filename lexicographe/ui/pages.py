@@ -988,6 +988,11 @@ class PageExports(Page):
         for nom, extension, filtre, fonction, aide in self.PUBLICATIONS:
             self._carte(nom, aide, "Publier…",
                         lambda _=False, e=extension, f=filtre, fn=fonction: self._publier(e, f, fn))
+        self._carte("Site web du dictionnaire",
+                    "Dossier à mettre sur n'importe quel hébergement web (ou à ouvrir sans internet) : recherche "
+                    "dans les deux langues, sans tenir compte des tons si on veut, lettres de l'alphabet, photos, "
+                    "lien direct vers chaque mot. Mêmes entrées que le dictionnaire imprimé.", "Créer…",
+                    self._site_web)
         self._carte("Application Android",
                     "Construit l'application (.apk) avec Dictionary App Builder (SIL), installé sur cet ordinateur : "
                     "lexique, images, icône, page « À propos », signature avec votre keystore. Le projet DAB reste "
@@ -1060,6 +1065,34 @@ class PageExports(Page):
         info(self, "Application Android", "Dossier prêt pour Dictionary App Builder :\n"
                                           f"{os.path.dirname(lift)}\n\nLis le fichier LISEZ-MOI.txt qu'il contient.")
         QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.dirname(lift)))
+
+    def _site_web(self):
+        from .. import site_web
+        d = DialoguePublication(self.projet, self)
+        d.setWindowTitle("Site web du dictionnaire")
+        d.format.setEnabled(False)   # sans objet pour une page web
+        if not d.exec():
+            return
+        options = d.options()
+        if not options.statuts:
+            erreur(self, "Site web", "Coche au moins un statut d'entrée à publier.")
+            return
+        parent = QFileDialog.getExistingDirectory(self, "Dossier où créer le site",
+                                                  os.path.join(os.path.expanduser("~"), "Documents"))
+        if not parent:
+            return
+        from ..projet import nom_fichier_sur
+        dossier = os.path.join(parent, f"{nom_fichier_sur(self.projet.nom)}-site")
+        try:
+            with CurseurAttente():
+                n, chemin = site_web.exporter(self.projet, dossier, options)
+        except Exception as e:
+            erreur(self, "Site web", "Le site n'a pas pu être créé.", e)
+            return
+        info(self, "Site web", f"{n} entrée(s) dans le site :\n{dossier}\n\nPour le mettre en ligne, copiez tout ce "
+                               "dossier chez un hébergeur web (ou sur une clé USB pour le consulter sans internet). "
+                               "La page d'accueil est index.html.")
+        QDesktopServices.openUrl(QUrl.fromLocalFile(chemin))
 
     def _android(self):
         from .android_ui import construire_appli

@@ -50,6 +50,8 @@ class EntreeImprimee:
     variantes: list[str] = field(default_factory=list)
     composants: list[str] = field(default_factory=list)
     renvois: list[str] = field(default_factory=list)
+    entree_id: int | None = None      # pour retrouver les médias (site web)
+    renvois_vedettes: list[tuple[str, str]] = field(default_factory=list)   # (type, vedette visée)
 
 
 @dataclass
@@ -79,7 +81,7 @@ def contenu(projet, options: Options):
 
     lettres, courante = [], None
     for e in entrees:
-        imp = EntreeImprimee(vedette=e.vedette, tete=e.tete, prononciation=e.prononciation,
+        imp = EntreeImprimee(vedette=e.vedette, tete=e.tete, prononciation=e.prononciation, entree_id=e.id,
                              type_morph=lexique.TYPES_MORPH.get(e.type_morph, "") if e.type_morph
                              not in ("", "stem", "root") else "")
         for n, s in enumerate(e.sens, start=1):
@@ -92,8 +94,9 @@ def contenu(projet, options: Options):
             sens.numero = i
         imp.variantes = [f"{v.forme} ({v.type})" for v in e.variantes if v.type != "allomorphe"]
         imp.composants = [par_id[c].vedette for c in e.composants if c in par_id]
-        imp.renvois = [f"{typ} : {par_id[c].vedette}" for c, typ in relations.get(e.id, []) if c in par_id
-                       and typ != "variante de"]
+        imp.renvois_vedettes = [(typ, par_id[c].vedette) for c, typ in relations.get(e.id, []) if c in par_id
+                                and typ != "variante de"]
+        imp.renvois = [f"{typ} : {vedette}" for typ, vedette in imp.renvois_vedettes]
         initiale = ordre.initiale(e.tete).upper() if e.tete else "?"
         if courante is None or courante[0] != initiale:
             courante = (initiale, [])

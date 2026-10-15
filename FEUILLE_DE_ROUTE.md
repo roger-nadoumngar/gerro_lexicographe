@@ -143,8 +143,11 @@ justifiées et jamais appliquées sans décision humaine.
 - [x] Analyses de l'interlinéaire de Paratext reprises comme analyses validées (positions à une seule
       analyse, sens du glossaire, mot présent dans le verset ; choix par verset pour les mots à plusieurs
       analyses) ; Paratext seulement lu
+- [x] Site web du dictionnaire (dossier autonome : index.html, données, photos) : recherche dans les deux
+      langues avec ou sans tons, lettres de l'alphabet du projet, lien direct vers chaque mot, adapté au
+      téléphone ; mêmes entrées que le dictionnaire imprimé
 
 ## Points restants
 
 - Circonfixes et redoublement partiel (CV-) dans l'analyseur
-- Export Webonary ; sons dans l'application Android
+- Webonary : passe par FLEx (export LIFT → FLEx → « Upload to Webonary ») ; sons dans l'application Android
