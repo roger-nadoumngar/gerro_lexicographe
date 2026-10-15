@@ -123,6 +123,10 @@ class Rapport:
     entrees: int = 0
     sens: int = 0
     termes: int = 0
+    analyses: int = 0          # analyses interlinéaires reprises
+    choix: int = 0             # choix d'analyse notés pour un verset
+    ambigus: int = 0           # positions où Paratext a plusieurs analyses : non reprises
+    non_relies: int = 0        # analyses dont un sens manque au glossaire ou dont le mot n'est pas au corpus
     avertissements: list[str] = field(default_factory=list)
 
     def resume(self):
@@ -133,6 +137,10 @@ class Rapport:
         if self.entrees or self.sens or self.termes:
             lignes.append(f"Lexique : {self.entrees} entrée(s) créée(s), {self.sens} sens ajouté(s) "
                           f"(dont {self.termes} rendu(s) de termes bibliques).")
+        if self.analyses or self.choix or self.ambigus or self.non_relies:
+            lignes.append(f"Interlinéaire : {self.analyses} analyse(s) de mots reprise(s), {self.choix} choix "
+                          f"par verset ; non reprises : {self.ambigus} position(s) à plusieurs analyses dans "
+                          f"Paratext, {self.non_relies} sans sens au glossaire ou mot absent du corpus.")
         if not lignes:
             lignes.append("Rien à importer.")
         if self.avertissements:
@@ -244,6 +252,131 @@ def importer_glossaire(projet_lex, projet_pt, rapport=None):
             for gl in [g for g in toutes if g.get("Language") == langue] or toutes:
                 _ajouter_sens(projet_lex.conn, forme, gl.text or "", type_morph,
                               note=f"Glossaire Paratext ({projet_pt.nom})", r=r)
+    return r
+
+
+def _sens_du_glossaire(projet_pt, langue):
+    """{Id du sens Paratext: (type morphologique, forme de l'entrée, forme du morphème, glose)}."""
+    chemin = os.path.join(projet_pt.dossier, "Lexicon.xml")
+    sens = {}
+    if not os.path.isfile(chemin):
+        return sens
+    for item in ET.parse(chemin).getroot().iter("item"):
+        lexeme = item.find("Lexeme")
+        if lexeme is None or not lexeme.get("Form"):
+            continue
+        type_morph = TYPES_LEXEMES.get(lexeme.get("Type", "Word"), "")
+        forme = normaliser(lexeme.get("Form"))
+        entree = forme + "-" if type_morph == "prefix" else "-" + forme if type_morph == "suffix" else forme
+        for s in item.iter("Sense"):
+            gloses = list(s.iter("Gloss"))
+            choisie = next((g for g in gloses if g.get("Language") == langue), gloses[0] if gloses else None)
+            if s.get("Id") and choisie is not None and (choisie.text or "").strip():
+                sens[s.get("Id")] = (type_morph, entree, forme, normaliser(choisie.text).strip())
+    return sens
+
+
+def importer_interlineaire(projet_lex, projet_pt, rapport=None):
+    """Analyses des mots glosés dans l'interlinéaire de Paratext (dossier Interlinear_<langue>).
+
+    Règles : une position du verset n'est reprise que si Paratext n'y a qu'une analyse ; chaque morphème
+    doit renvoyer à un sens du glossaire (Lexicon.xml), les morceaux doivent redonner le mot, et le mot
+    doit figurer dans le verset du corpus. Les analyses sont validées (elles l'ont été par un humain
+    dans Paratext) ; un mot analysé de plusieurs façons reçoit toutes ses analyses, et le choix de
+    chaque verset est noté quand le mot n'y figure qu'une fois. Le projet Paratext n'est que lu."""
+    from . import interlineaire
+    r = rapport or Rapport()
+    langue = projet_lex.reglage("langue_analyse_code") or "fr"
+    dossiers = sorted(glob.glob(os.path.join(projet_pt.dossier, "Interlinear_*")))
+    dossier = next((d for d in dossiers if d.endswith(f"_{langue}")), dossiers[0] if dossiers else None)
+    if not dossier:
+        r.avertissements.append(f"Pas d'interlinéaire dans {projet_pt.nom}.")
+        return r
+    importer_glossaire(projet_lex, projet_pt, r)   # les entrées et sens du glossaire doivent exister
+    sens_pt = _sens_du_glossaire(projet_pt, langue)
+    conn = projet_lex.conn
+    tok = projet_lex.tokeniseur_vern
+    cache_sens = {}
+
+    def notre_sens(id_pt):
+        """(entree_id, sens_id, glose) du sens Paratext dans le lexique du projet, ou None."""
+        if id_pt not in cache_sens:
+            cache_sens[id_pt] = None
+            if id_pt in sens_pt:
+                type_morph, entree, _, glose = sens_pt[id_pt]
+                for eid in lexique.chercher_par_forme(conn, entree):
+                    e = lexique.lire_entree(conn, eid)
+                    if (e.type_morph or "") != (type_morph or ""):
+                        continue
+                    s = next((s for s in e.sens if s.glose.strip().lower() == glose.lower()), None)
+                    if s:
+                        cache_sens[id_pt] = (eid, s.id, s.glose)
+                        break
+        return cache_sens[id_pt]
+
+    occurrences = {}   # forme → {signature: [refs]}
+    for fichier in sorted(glob.glob(os.path.join(dossier, "*.xml"))):
+        try:
+            racine = ET.parse(fichier).getroot()
+        except ET.ParseError:
+            r.avertissements.append(f"Fichier illisible : {os.path.basename(fichier)}")
+            continue
+        for item in racine.iter("item"):
+            ref = (item.findtext("string") or "").strip()
+            donnees = item.find("VerseData")
+            if not ref or donnees is None:
+                continue
+            ligne = conn.execute("SELECT vernaculaire FROM phrases WHERE ref=?", (ref,)).fetchone()
+            mots_du_verset = [m.lower() for m in tok.mots(ligne[0] or "")] if ligne else []
+            par_position = {}
+            for cluster in donnees.findall("Cluster"):
+                plage = cluster.find("Range")
+                cle = (plage.get("Index"), plage.get("Length")) if plage is not None else None
+                par_position.setdefault(cle, []).append(cluster)
+            for clusters in par_position.values():
+                if len(clusters) != 1:
+                    r.ambigus += 1
+                    continue
+                lexemes = clusters[0].findall("Lexeme")
+                if not lexemes or any(l.get("Id", "").startswith("Phrase:") for l in lexemes):
+                    continue
+                morphemes = []
+                for l in lexemes:
+                    trouve = notre_sens(l.get("GlossId"))
+                    if not trouve:
+                        morphemes = None
+                        break
+                    forme_morpheme = sens_pt[l.get("GlossId")][2]
+                    morphemes.append((forme_morpheme.lower(),) + trouve)
+                if not morphemes:
+                    r.non_relies += 1
+                    continue
+                forme = "".join(m[0] for m in morphemes)
+                if forme not in mots_du_verset:
+                    r.non_relies += 1
+                    continue
+                signature = tuple(morphemes)
+                occurrences.setdefault(forme, {}).setdefault(signature, []).append(ref)
+
+    gloses = interlineaire._gloses_sens(conn)
+    with projet_lex.en_lot():
+        for forme, signatures in occurrences.items():
+            ids = {}
+            for signature in signatures:
+                analyse = interlineaire.Analyse(forme=forme, morphemes=[
+                    interlineaire.MorphemeAnalyse(f, eid, sid, glose) for f, eid, sid, glose in signature])
+                avant = conn.execute("SELECT COUNT(*) FROM analyses").fetchone()[0]
+                ids[signature] = interlineaire.valider(conn, analyse, gloses)
+                r.analyses += conn.execute("SELECT COUNT(*) FROM analyses").fetchone()[0] - avant
+            if len(signatures) > 1:   # plusieurs analyses : le choix de Paratext pour chaque verset
+                for signature, refs in signatures.items():
+                    for ref in refs:
+                        texte = conn.execute("SELECT vernaculaire FROM phrases WHERE ref=?", (ref,)).fetchone()[0]
+                        mots = [m.lower() for m in tok.mots(texte or "")]
+                        if mots.count(forme) == 1:
+                            conn.execute("INSERT OR REPLACE INTO choix_occurrences (ref, position, analyse_id) "
+                                         "VALUES (?, ?, ?)", (ref, mots.index(forme), ids[signature]))
+                            r.choix += 1
     return r
 
 
