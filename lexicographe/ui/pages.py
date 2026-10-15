@@ -35,6 +35,23 @@ class Page(QWidget):
             self.racine.addWidget(s)
         self.racine.addSpacing(8)
 
+    def zone_de_cartes(self):
+        """Colonne de cartes qui défile : quand la fenêtre est trop basse, les cartes gardent
+        leur hauteur au lieu d'être écrasées (titres coupés). Retourne la colonne à remplir."""
+        from PySide6.QtWidgets import QFrame, QScrollArea
+        zone = QScrollArea()
+        zone.setWidgetResizable(True)
+        zone.setFrameShape(QFrame.NoFrame)
+        zone.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        contenu = QWidget()
+        contenu.setObjectName("zoneCartes")
+        zone.setStyleSheet("QScrollArea, #zoneCartes { background: transparent; }")
+        colonne = QVBoxLayout(contenu)
+        colonne.setContentsMargins(0, 0, 6, 0)
+        zone.setWidget(contenu)
+        self.racine.addWidget(zone, 1)
+        return colonne
+
     def rafraichir(self):
         pass
 
@@ -845,6 +862,7 @@ class PageImports(Page):
     def __init__(self, projet, actions):
         super().__init__(projet, "Imports", "Les fichiers importés ne sont jamais modifiés. Avant un import de "
                                             "lexique, une sauvegarde du projet est faite.")
+        colonne = self.zone_de_cartes()
         for nom, aide, action in actions:
             c = carte()
             h = QHBoxLayout(c)
@@ -858,8 +876,8 @@ class PageImports(Page):
             b = QPushButton("Importer…")
             b.clicked.connect(action)
             h.addWidget(b)
-            self.racine.addWidget(c)
-        self.racine.addStretch()
+            colonne.addWidget(c)
+        colonne.addStretch()
 
 
 class DialoguePublication(QDialog):
@@ -932,6 +950,7 @@ class PageExports(Page):
     def __init__(self, projet):
         super().__init__(projet, "Exports", "Publier le dictionnaire, préparer l'application Android, ou échanger "
                                             "les données avec d'autres logiciels.")
+        self.colonne = self.zone_de_cartes()
         for nom, extension, filtre, fonction, aide in self.PUBLICATIONS:
             self._carte(nom, aide, "Publier…",
                         lambda _=False, e=extension, f=filtre, fn=fonction: self._publier(e, f, fn))
@@ -941,7 +960,7 @@ class PageExports(Page):
         for nom, extension, filtre, fonction, aide in self.FORMATS:
             self._carte(nom, aide, "Exporter…",
                         lambda _=False, e=extension, f=filtre, fn=fonction: self._exporter(e, f, fn))
-        self.racine.addStretch()
+        self.colonne.addStretch()
 
     def _carte(self, nom, aide, texte_bouton, action):
         c = carte()
@@ -956,7 +975,7 @@ class PageExports(Page):
         b = QPushButton(texte_bouton)
         b.clicked.connect(action)
         h.addWidget(b)
-        self.racine.addWidget(c)
+        self.colonne.addWidget(c)
 
     def _publier(self, extension, filtre, nom_fonction):
         from .. import publication
