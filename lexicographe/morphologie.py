@@ -30,7 +30,13 @@ dans le lexique.
   signes, mais seulement pour un mot qui n'a aucune décomposition exacte. Ces décompositions sont
   marquées « approchées » et ne sont jamais proposées comme évidentes : le linguiste choisit.
 
-Limite assumée : les circonfixes ne sont pas encore pris en charge.
+* Circonfixe (type « circumfix », forme écrite en deux parties : « ka- -ŋ » ou « ka-…-ŋ ») : proposé
+  seulement quand ses deux parties entourent directement un radical déclaré (ka + radical + ŋ).
+* Redoublement partiel : une copie du début du radical placée devant lui (« ba-bal », « kɔ̄-kɔ̄rɔ́ »), formée
+  de consonnes puis de voyelles. Il n'est proposé que si le projet déclare la classe des voyelles
+  (« V = a e i o u … » dans les réglages) : sans elle, on ne peut pas dire ce qu'est une syllabe.
+
+Limite assumée : le redoublement partiel en fin de mot (copie de la dernière syllabe) n'est pas traité.
 """
 
 import unicodedata
@@ -56,7 +62,7 @@ class Morpheme:
     categorie: str
     role: str                  # « avant », « radical », « après », « infixe », « redoublement »
     environnement: str = ""    # condition d'un allomorphe
-    suite: bool = False        # seconde partie d'un radical coupé par un infixe
+    suite: bool = False        # seconde partie (radical coupé par un infixe, fin d'un circonfixe)
 
 
 @dataclass
@@ -71,6 +77,8 @@ class Decomposition:
         for i, m in enumerate(self.morphemes):
             if m.role == "infixe":
                 texte += f"‹{m.forme}›"
+            elif m.suite and m.role == "circonfixe":
+                texte += "-" + m.forme      # fin du circonfixe : ka-kó-ŋ
             elif m.suite or i == 0:
                 texte += m.forme
             else:
@@ -227,6 +235,7 @@ class Analyseur:
 
     def __init__(self, conn):
         self.formes = {"avant": {}, "radical": {}, "apres": {}, "infixe": {}}
+        self.circonfixes = {}      # partie gauche → [(partie droite, Morpheme)]
         premiers_sens = {}
         for sid, eid, glose, cat in conn.execute(
                 """SELECT s.id, s.entree_id, s.glose, c.nom FROM sens s
@@ -247,8 +256,11 @@ class Analyseur:
                 roles = ["avant", "apres"]
             elif type_morph == "infix":
                 roles = ["infixe"]
+            elif type_morph == "circumfix":
+                self._ajouter_circonfixe(eid, sid, glose, cat, [forme, citation])
+                continue
             elif type_morph in NON_RADICAUX:
-                continue  # circonfixes : pas encore pris en charge
+                continue
             else:
                 roles = ["radical"]
             variantes = [(forme, ""), (citation, "")] + allomorphes.get(eid, [])
@@ -276,7 +288,24 @@ class Analyseur:
             for f, liste in d.items():
                 self.formes_st[role].setdefault(_sans_signes(f), []).extend(liste)
         self.longueurs_st = {role: sorted({len(f) for f in d}, reverse=True) for role, d in self.formes_st.items()}
+        self.circonfixes_st = {}
+        for gauche, liste in self.circonfixes.items():
+            for droite, m in liste:
+                self.circonfixes_st.setdefault(_sans_signes(gauche), []).append((_sans_signes(droite), m))
         self._environnements = {}
+
+    def _ajouter_circonfixe(self, eid, sid, glose, cat, formes):
+        import re
+        for forme in formes:
+            parties = [p for p in re.split(r"\s+|…|\.\.\.", normaliser(forme or "").strip()) if p.strip(MARQUES)]
+            if len(parties) != 2:
+                continue
+            gauche, droite = _nettoyer(parties[0]), _nettoyer(parties[1])
+            if gauche and droite:
+                m = Morpheme(gauche, eid, sid, glose, cat, "circonfixe")
+                liste = self.circonfixes.setdefault(gauche, [])
+                if all(x[1].entree_id != eid or x[0] != droite for x in liste):
+                    liste.append((droite, m))
 
     def environnement(self, texte):
         if texte not in self._environnements:
@@ -295,7 +324,7 @@ class Analyseur:
     def analyser(self, mot):
         """Toutes les décompositions du mot, les plus simples d'abord."""
         mot = _nettoyer(mot)
-        resultats = self._analyser(mot) + self._redoublements(mot)
+        resultats = self._analyser(mot) + self._redoublements(mot) + self._redoublements_partiels(mot)
         if self.sans_tons and not resultats:   # seulement pour un mot sans aucune analyse exacte
             resultats = self._approchees(mot)
         uniques = {}
@@ -310,7 +339,8 @@ class Analyseur:
         positions = [i for i, c in enumerate(decompose) if not unicodedata.combining(c)]
         nu = "".join(decompose[i] for i in positions)
         resultats = []
-        for d in self._analyser(nu, self.formes_st, self.longueurs_st, lambda f: len(_sans_signes(f))):
+        for d in self._analyser(nu, self.formes_st, self.longueurs_st, lambda f: len(_sans_signes(f)),
+                                self.circonfixes_st):
             morphemes, debut = [], 0
             for m in d.morphemes:
                 fin = debut + len(_sans_signes(m.forme))
@@ -321,6 +351,35 @@ class Analyseur:
                                           m.environnement, m.suite))
                 debut = fin
             resultats.append(Decomposition(morphemes, approchee=True))
+        return resultats
+
+    def _redoublements_partiels(self, mot):
+        """« ba-bal » : copie consonne(s) + voyelle(s) du début d'un radical déclaré, placée devant lui.
+        Seulement si la classe des voyelles « V » est déclarée dans le projet."""
+        voyelles = {_sans_tons(v) for v in self.classes.get("V", [])}
+        if not voyelles:
+            return []
+        resultats = []
+        for i in range(2, len(mot) - 1):
+            if unicodedata.combining(mot[i]):
+                continue
+            copie = mot[:i]
+            reste = mot[i + 1:] if mot[i] == "-" else mot[i:]
+            lettres = _sans_tons(copie)
+            if not lettres or "-" in copie:
+                continue
+            # forme C…CV…V : au moins une consonne d'abord, au moins une voyelle à la fin
+            j = 0
+            while j < len(lettres) and lettres[j] not in voyelles:
+                j += 1
+            if j == 0 or j == len(lettres) or any(c not in voyelles for c in lettres[j:]):
+                continue
+            for d in self._analyser(reste)[:5]:
+                r = d.morphemes[0]
+                if r.role != "radical" or len(_sans_tons(r.forme)) <= len(lettres)                         or not _sans_tons(r.forme).startswith(lettres):
+                    continue
+                red = Morpheme(copie, r.entree_id, r.sens_id, "RED", "", "redoublement")
+                resultats.append(Decomposition([red] + d.morphemes))
         return resultats
 
     def _redoublements(self, mot):
@@ -341,9 +400,10 @@ class Analyseur:
                     resultats.append(Decomposition(d.morphemes + [red]))
         return resultats
 
-    def _analyser(self, mot, formes=None, longueurs=None, longueur=len):
+    def _analyser(self, mot, formes=None, longueurs=None, longueur=len, circonfixes=None):
         formes = formes or self.formes
         longueurs = longueurs or self.longueurs
+        circonfixes = self.circonfixes if circonfixes is None else circonfixes
         resultats = []
 
         def prefixes(debut, pris):
@@ -362,6 +422,24 @@ class Analyseur:
                     for m in formes["radical"].get(mot[debut:debut + n], []):
                         suffixes(debut + n, pris + [m], 0)
             avec_infixe(debut, pris)
+            avec_circonfixe(debut, pris)
+
+        def avec_circonfixe(debut, pris):
+            # ka + radical déclaré + ŋ : les deux parties entourent directement le radical
+            for gauche, liste in circonfixes.items():
+                if not mot.startswith(gauche, debut):
+                    continue
+                milieu = debut + len(gauche)
+                for droite, c in liste:
+                    for n in longueurs["radical"]:
+                        fin = milieu + n
+                        if fin + len(droite) <= len(mot) and mot.startswith(droite, fin):
+                            for r in formes["radical"].get(mot[milieu:fin], []):
+                                fin_c = Morpheme(mot[fin:fin + len(droite)], c.entree_id, c.sens_id, c.glose,
+                                                 c.categorie, "circonfixe", suite=True)
+                                debut_c = Morpheme(mot[debut:milieu], c.entree_id, c.sens_id, c.glose, c.categorie,
+                                                   "circonfixe")
+                                suffixes(fin + len(droite), pris + [debut_c, r, fin_c], 0)
 
         def avec_infixe(debut, pris):
             # radical déclaré coupé par un infixe déclaré, jamais en bordure : k‹ar›tab
