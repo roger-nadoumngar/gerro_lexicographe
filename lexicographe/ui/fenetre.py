@@ -137,6 +137,10 @@ class FenetrePrincipale(QMainWindow):
             a.triggered.connect(action)
             fichier.addAction(a)
         aide = self.menuBar().addMenu("&Aide")
+        guide = QAction("Guide d'utilisation", self)
+        guide.setShortcut(QKeySequence.HelpContents)
+        guide.triggered.connect(self._guide)
+        aide.addAction(guide)
         a = QAction("À propos", self)
         a.triggered.connect(lambda: QMessageBox.about(
             self, APP_NAME, f"<b>{APP_NAME}</b> {__version__}<br>Lexicographie et documentation des langues.<br>"
@@ -144,6 +148,15 @@ class FenetrePrincipale(QMainWindow):
                             "Domaines sémantiques : SIL Global, <a href='https://semdom.org'>semdom.org</a>, "
                             "licence <a href='https://creativecommons.org/licenses/by-sa/4.0/deed.fr'>CC BY-SA 4.0</a>."))
         aide.addAction(a)
+
+    def _guide(self):
+        from ..chemins import ressource
+        from . import traduction
+        try:
+            chemin = ressource("aide", f"guide-{traduction.langue()}.html")
+        except FileNotFoundError:
+            chemin = ressource("aide", "guide-fr.html")
+        QDesktopServices.openUrl(QUrl.fromLocalFile(chemin))
 
     def _langue_interface(self):
         from PySide6.QtWidgets import QInputDialog

@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>User guide — Gerro Lexicographe</title>
+<style>
+:root { --fond:#f6f1e7; --carte:#fffdf8; --texte:#2a2620; --doux:#6d655a; --accent:#1f5c55; --ligne:#e2d9c8; }
+@media (prefers-color-scheme: dark) { :root { --fond:#1d1b18; --carte:#26231f; --texte:#ece6da; --doux:#a89f92; --accent:#7cc4b8; --ligne:#3a352e; } }
+body { margin:0; background:var(--fond); color:var(--texte); font-family:"Charis SIL", Georgia, serif; line-height:1.6; }
+header { background:var(--accent); color:#fff; padding:22px 16px; }
+header h1 { margin:0 auto; max-width:860px; font-size:1.7rem; }
+header p { margin:4px auto 0; max-width:860px; opacity:.9; }
+main { max-width:860px; margin:0 auto; padding:10px 16px 50px; }
+nav { background:var(--carte); border:1px solid var(--ligne); border-radius:10px; padding:10px 18px; margin:16px 0; }
+nav ol { margin:6px 0; padding-left:20px; }
+h2 { color:var(--accent); border-bottom:1px solid var(--ligne); padding-bottom:4px; margin-top:34px; }
+h3 { margin-bottom:4px; }
+.regle { background:var(--carte); border-left:4px solid var(--accent); padding:8px 14px; border-radius:6px; }
+.chemin { font-family: Consolas, monospace; font-size:.92em; background:var(--carte); border:1px solid var(--ligne); border-radius:4px; padding:0 4px; }
+table { border-collapse:collapse; width:100%; }
+td, th { border:1px solid var(--ligne); padding:6px 8px; vertical-align:top; text-align:left; }
+th { background:var(--carte); }
+a { color:var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Gerro Lexicographe — User guide</h1>
+  <p>Lexicon, texts, analysis, collection, primer and publishing (print, website, Android app, keyboard) for documented languages.</p>
+</header>
+<main>
+<nav><b>Contents</b>
+<ol>
+  <li><a href="#principe">The principle: rules, not guesses</a></li>
+  <li><a href="#demarrer">Getting started: create or take over a project</a></li>
+  <li><a href="#pages">The pages of the program</a></li>
+  <li><a href="#importer">Importing data</a></li>
+  <li><a href="#lexique">Working on the lexicon</a></li>
+  <li><a href="#textes">Analysing texts</a></li>
+  <li><a href="#collecte">Collecting with speakers</a></li>
+  <li><a href="#syllabaire">Preparing a primer</a></li>
+  <li><a href="#publier">Publishing</a></li>
+  <li><a href="#donnees">Data, backups, working on several computers</a></li>
+  <li><a href="#questions">Frequent questions</a></li>
+</ol></nav>
+
+<h2 id="principe">1. The principle: rules, not guesses</h2>
+<p>The program never decides in the linguist's place. It applies rules that you declare (alphabet, word characters, sound classes, grammatical features…) and <b>suggests</b> results while showing what they are based on. Nothing enters the lexicon as “approved” without your decision.</p>
+<p class="regle">Files you import (FLEx, Paratext, LIFT, Word…) are <b>never modified</b>: they are only read. Before every significant import or merge, the project is backed up automatically.</p>
+
+<h2 id="demarrer">2. Getting started: create or take over a project</h2>
+<p>A <b>project</b> documents one language and is a single <span class="chemin">.lexique</span> file. At start-up, choose:</p>
+<ul>
+  <li><b>New project</b>: language name, ISO 639-3 code (see ethnologue.com), analysis language (French or English).</li>
+  <li><b>Import a FLEx project</b>: the program finds the FLEx projects on the computer and takes over lexicon, texts and interlinear analyses.</li>
+  <li><b>Open</b> an existing project.</li>
+</ul>
+<p>Every new project receives SIL's list of <b>semantic domains</b> (1,792 domains, elicitation questions in French and English).</p>
+<p>Then set up the project: <b>File → Project settings</b>.</p>
+<table>
+<tr><th>Tab</th><th>To set</th></tr>
+<tr><td>Languages</td><td>names and codes of the languages.</td></tr>
+<tr><td>Writing</td><td><b>alphabet</b> in order (multigraphs included: <i>a b ɓ d … ng ŋ ŋg</i>), characters that belong to words (apostrophe, hyphen), font, sound classes for allomorphs, and the box “the corpus does not always write tones”.</td></tr>
+<tr><td>Categories, Features</td><td>grammatical categories and features (noun class, tone…) with their allowed values.</td></tr>
+</table>
+<p>The menu language is chosen in <b>File → Interface language</b> (French or English).</p>
+
+<h2 id="pages">3. The pages of the program</h2>
+<table>
+<tr><th>Page</th><th>Role</th></tr>
+<tr><td>Dashboard</td><td>Project figures, checks (letters from another alphabet), contradictions between lexicon and corpus.</td></tr>
+<tr><td>Lexicon</td><td>Complete entries: form, pronunciation, senses, examples, variants, relations, images, sounds. Bulk editing, duplicates.</td></tr>
+<tr><td>Domains</td><td>Semantic domains, elicitation questions, classified words.</td></tr>
+<tr><td>Reversal index</td><td>The analysis-language → language part of the dictionary.</td></tr>
+<tr><td>Texts</td><td>Interlinear: each word with its morphemes and glosses.</td></tr>
+<tr><td>Word forms, Concordance</td><td>Corpus words by frequency; a word or morpheme in context.</td></tr>
+<tr><td>Collection</td><td>Working with speakers: by domain, by word list, tasks to complete, audio recording.</td></tr>
+<tr><td>Primer</td><td>Teaching order of letters and lessons.</td></tr>
+<tr><td>Approval</td><td>Translation suggestions drawn from the parallel corpus.</td></tr>
+<tr><td>Corpus, Imports, Exports</td><td>Parallel sentences; all imports; all publications.</td></tr>
+</table>
+
+<h2 id="importer">4. Importing data</h2>
+<ul>
+  <li><b>Paratext project</b>: translated books (corpus), glossary, biblical term renderings and <b>interlinear analyses</b>. For a parallel corpus, import the project in the documented language, then a Bible in the analysis language (“Complete Bible”).</li>
+  <li><b>Complete Bible</b>: a folder or .zip archive in USFM or USX (for example the World English Bible or Louis Segond 1910 on eBible.org, public domain).</li>
+  <li><b>Printed dictionary</b>: a dictionary converted to Word or text, laid out like those of the Sara-Bagirmi Project. A simulation is shown first; it completes entries and repairs truncated glosses.</li>
+  <li><b>LIFT file</b>, <b>Field text</b>, <b>Word / PDF document</b>, <b>Audio recording</b>, <b>Work from another computer</b> (merge).</li>
+</ul>
+
+<h2 id="lexique">5. Working on the lexicon</h2>
+<ul>
+  <li>An entry has a form, possibly a citation form and a pronunciation, a type (stem, prefix, suffix, infix…), a status (<i>draft</i>, <i>to check</i>, <i>approved</i>) and senses (gloss, definition, category, domains, examples).</li>
+  <li><b>Duplicates…</b> (below the list): entries with the same form and type and at least one gloss in common; merging moves everything onto the kept entry, nothing is lost.</li>
+  <li><b>Edit the selection…</b>: change the status, category or domain of several entries.</li>
+  <li>Dashboard → <b>View and correct…</b>: letters from another alphabet that imitate Latin letters (Cyrillic у for y…).</li>
+</ul>
+
+<h2 id="textes">6. Analysing texts</h2>
+<p><b>Texts</b> page: click a word. The parser suggests possible segmentations from the morphemes declared in the lexicon (prefixes, stems, suffixes, clitics, infixes, reduplication). Colours: <b>green</b> = approved analysis, <b>ochre</b> = a single suggestion, <b>rust</b> = several segmentations, <b>grey</b> = unknown.</p>
+<ul>
+  <li>If the corpus does not always write tones, tick the corresponding box in the settings: words without an exact analysis are also compared without tones, and marked “different tones: to check”.</li>
+  <li>An allomorph condition is written <i>/ N _</i> (after a nasal), <i>/ _ #</i> (word-final), with the declared sound classes.</li>
+  <li><b>Approval</b> page: the engine suggests a translation for each word of the parallel corpus, with the sentences that support it.</li>
+</ul>
+
+<h2 id="collecte">7. Collecting with speakers</h2>
+<ul>
+  <li><b>By domain</b>: one question at a time (“What words refer to the parts of the body?”).</li>
+  <li><b>By word list</b>: import a Word or text list (one line or table row per word); the speaker gives the word in their language; words already known are shown.</li>
+  <li><b>Tasks</b>: missing senses, examples, domains or pronunciations, one entry at a time.</li>
+  <li><b>Speaker mode</b>: full screen, large characters.</li>
+</ul>
+<p>Collected words are drafts, to check afterwards in the Lexicon.</p>
+
+<h2 id="syllabaire">8. Preparing a primer</h2>
+<p><b>Primer</b> page: the program counts the graphemes of the corpus and suggests a teaching order (at each lesson, the letter that makes the most new words readable). You can reorder. Export as a PDF booklet or for Bloom's “Decodable Reader” tool.</p>
+
+<h2 id="publier">9. Publishing</h2>
+<table>
+<tr><th>Exports</th><th>Result</th></tr>
+<tr><td>Printed dictionary (PDF)</td><td>Two columns, project alphabet letters, guide words, reversal index; print preview.</td></tr>
+<tr><td>Dictionary (Word)</td><td>Same content, editable in Word or LibreOffice.</td></tr>
+<tr><td>Dictionary website</td><td>Folder to put on a web host or a USB stick; search in both languages, with or without tones.</td></tr>
+<tr><td>Android app</td><td>Built with Dictionary App Builder (SIL, free) installed on the computer; signed with your <i>keystore</i>. <b>Always keep the same keystore</b> for the same app.</td></tr>
+<tr><td>Keyman keyboard</td><td>Computed from your alphabet: letter + <b>;</b> for special letters (b; → ɓ), <b>=</b> then a code for tones (a=h → á, a=m → ā, a=b → à). Printable help provided.</td></tr>
+<tr><td>LIFT, JSON, CSV, text</td><td>Exchange with FLEx, WeSay and other programs. For Webonary: export to LIFT, import into FLEx, then “Upload to Webonary”.</td></tr>
+</table>
+<p>Only entries with the chosen statuses are published (by default: <i>to check</i> and <i>approved</i>, not drafts).</p>
+
+<h2 id="donnees">10. Data, backups, working on several computers</h2>
+<ul>
+  <li>Projects: <span class="chemin">%LOCALAPPDATA%\GerroLexicographe\Projets</span>; automatic backups: the <span class="chemin">Sauvegardes</span> folder next to it (File menu → Open the backups folder).</li>
+  <li><b>File → Save a copy of the project</b> makes a consistent copy, even while you work.</li>
+  <li>Several computers: copy the project to the other computer, work there, then <b>Imports → Work from another computer</b>: new entries are added; for an entry changed on both sides, the most recent version wins.</li>
+</ul>
+
+<h2 id="questions">11. Frequent questions</h2>
+<h3>A word with an apostrophe is split in two (“dee’g”).</h3>
+<p>Add the apostrophe to the word characters: Settings → Writing.</p>
+<h3>The lexicon does not follow the order of my alphabet.</h3>
+<p>Declare the alphabet in order, multigraphs included, in Settings → Writing.</p>
+<h3>Many corpus words are “unknown”.</h3>
+<p>Check that the lexicon and the corpus use the same spelling; if the corpus does not write tones, tick “the corpus does not always write tones”. Analyse the most frequent words first (Word forms page).</p>
+<h3>The Android app does not build.</h3>
+<p>Open Dictionary App Builder once so that it installs Java and the Android SDK; check the keystore and its password. DAB's log is shown if the build fails.</p>
+<p style="margin-top:40px;color:var(--doux)">Semantic domains: SIL Global, semdom.org, licence CC BY-SA 4.0.</p>
+</main>
+</body>
+</html>
