@@ -103,6 +103,35 @@ def test_corpus_sans_tons(lexique_morpho):
     assert ctx.statut("tɔl")[0] == il.AMBIGUE, "une approchée seule n'est jamais évidente"
 
 
+def test_circonfixe(lexique_morpho):
+    projet, ids = lexique_morpho
+    conn = projet.conn
+    _e(conn, "ka- -ŋ", "NMLZ", "circumfix")
+    a = Analyseur(conn)
+    (d,) = a.analyser("kakóŋ")
+    assert (d.segmentation, d.gloses) == ("ka-kó-ŋ", "NMLZ-arbre")
+    assert il.reconstitue(il.depuis_decomposition("kakóŋ", d))
+    assert a.analyser("kakóje") == [] or all(m.role != "circonfixe" for x in a.analyser("kakóje")
+                                               for m in x.morphemes), "sans sa partie droite : pas de circonfixe"
+    (d,) = a.analyser("kakóŋje")
+    assert d.gloses == "NMLZ-arbre-PL", "suffixes après la partie droite"
+
+
+def test_redoublement_partiel(lexique_morpho):
+    projet, _ = lexique_morpho
+    conn = projet.conn
+    bal = _e(conn, "bàl", "frapper", "stem")
+    assert Analyseur(conn).analyser("babàl") == [], "classe des voyelles non déclarée : rien n'est proposé"
+    projet.definir_reglages({"classes_phonologiques": "V = a e i o u ə ɔ"})
+    a = Analyseur(conn)
+    (d,) = a.analyser("ba-bàl")
+    assert (d.segmentation, d.gloses) == ("ba-bàl", "RED-frapper")
+    assert d.morphemes[0].role == "redoublement" and d.morphemes[1].entree_id == bal
+    assert [x.gloses for x in a.analyser("babàl")] == ["RED-frapper"], "sans tiret, tons de la copie libres"
+    assert a.analyser("abàl") == [], "la copie commence par une consonne"
+    assert a.analyser("bəbàl") == [], "la copie reprend exactement le début du radical"
+
+
 def test_infixe(lexique_morpho):
     projet, _ = lexique_morpho
     conn = projet.conn

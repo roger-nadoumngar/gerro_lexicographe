@@ -162,7 +162,12 @@ justifiées et jamais appliquées sans décision humaine.
 - [x] Programme d'installation (Inno Setup) : utilisateur ou tous, raccourcis, icône, désinstallation
       qui ne touche pas aux projets
 
+## Version 1.5 (en cours)
+
+- [x] Analyseur : circonfixes déclarés (« ka- -ŋ » entourant un radical déclaré) et redoublement partiel
+      (copie consonne(s) + voyelle(s) du début du radical, seulement si la classe V est déclarée)
+
 ## Points restants
 
-- Circonfixes et redoublement partiel (CV-) dans l'analyseur
+- Redoublement partiel en fin de mot (copie de la dernière syllabe)
 - Webonary : passe par FLEx (export LIFT → FLEx → « Upload to Webonary ») ; sons dans l'application Android
