@@ -125,9 +125,16 @@ justifiées et jamais appliquées sans décision humaine.
 - [x] Liste des domaines sémantiques de SIL livrée en français et en anglais (CC BY-SA 4.0)
 - [x] Logiciel livré sans données d'une langue documentée (le corpus ngambay ne sert qu'aux tests)
 
+## Version 1.3 (en cours)
+
+- [x] Cartes des pages Imports, Exports et Collecte dans une zone qui défile (titres plus jamais coupés)
+- [x] Clavier Keyman calculé d'après l'alphabet et le lexique du projet (lettre + ;, tons avec =),
+      AZERTY ou QWERTY, compilé en paquet installable si Keyman Developer est présent, aide imprimable
+- [x] Contrôle des lettres d'un autre alphabet (у cyrillique pour y…) sur le tableau de bord, correction
+      à la demande selon une table de sosies, avec sauvegarde avant
+
 ## Points restants
 
-- Claviers Keyman
 - Infixes, circonfixes, redoublement dans l'analyseur
 - Analyses du glossaire interlinéaire de Paratext reprises dans les textes
 - Export Webonary ; projet Dictionary App Builder complet
