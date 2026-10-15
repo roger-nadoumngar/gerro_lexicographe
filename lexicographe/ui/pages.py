@@ -449,8 +449,11 @@ class PageLexique(Page):
         menu_import.addAction("Depuis un projet FLEx…", self._importer_flex)
         menu_import.addAction("Depuis un fichier LIFT (FLEx, WeSay)…", self._importer_lift)
         importer.setMenu(menu_import)
+        doublons_btn = QPushButton("Doublons…")
+        doublons_btn.clicked.connect(self._doublons)
         bas.addWidget(nouvelle)
         bas.addWidget(self.btn_masse)
+        bas.addWidget(doublons_btn)
         bas.addWidget(importer)
         bas.addStretch()
         gl.addLayout(bas)
@@ -540,6 +543,15 @@ class PageLexique(Page):
         self.liste.clearSelection()
         self.editeur.charger_entree(Entree(sens=[Sens()]))
         self.editeur.forme.setFocus()
+
+    def _doublons(self):
+        from .doublons_ui import DialogueDoublons
+        if not self.peut_quitter():   # une fiche en cours de modification est d'abord enregistrée ou abandonnée
+            return
+        d = DialogueDoublons(self.projet, self)
+        d.exec()
+        if d.modifie:
+            self.donnees_modifiees.emit()
 
     def _modifier_en_masse(self):
         ids = self.ids_selectionnes()

@@ -146,6 +146,9 @@ justifiées et jamais appliquées sans décision humaine.
 - [x] Site web du dictionnaire (dossier autonome : index.html, données, photos) : recherche dans les deux
       langues avec ou sans tons, lettres de l'alphabet du projet, lien direct vers chaque mot, adapté au
       téléphone ; mêmes entrées que le dictionnaire imprimé
+- [x] Doublons du lexique (Lexique > Doublons…) : même forme, même type, au moins une glose commune ;
+      fusion sans perte (sens, exemples, photos, relations, composants, analyses), statut le plus avancé
+      gardé, sauvegarde avant ; ngambay : 211 groupes, 280 entrées en trop
 
 ## Points restants
 
