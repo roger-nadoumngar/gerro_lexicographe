@@ -124,6 +124,7 @@ class FenetrePrincipale(QMainWindow):
             ("Tous les imports…", None, lambda: self._aller("Imports")),
             (None, None, None),
             ("Réglages du projet…", "Ctrl+,", self._reglages),
+            ("Langue de l'interface (Interface language)…", None, self._langue_interface),
             (None, None, None),
             ("Quitter", QKeySequence.Quit, self.close),
         ]:
@@ -143,6 +144,21 @@ class FenetrePrincipale(QMainWindow):
                             "Domaines sémantiques : SIL Global, <a href='https://semdom.org'>semdom.org</a>, "
                             "licence <a href='https://creativecommons.org/licenses/by-sa/4.0/deed.fr'>CC BY-SA 4.0</a>."))
         aide.addAction(a)
+
+    def _langue_interface(self):
+        from PySide6.QtWidgets import QInputDialog
+        from . import traduction
+        noms = list(traduction.LANGUES.values())
+        actuelle = list(traduction.LANGUES).index(traduction.langue_enregistree())
+        choix, ok = QInputDialog.getItem(self, "Langue de l'interface (Interface language)",
+                                         "Langue / Language :", noms, actuelle, False)
+        if not ok:
+            return
+        code = list(traduction.LANGUES)[noms.index(choix)]
+        traduction.enregistrer_langue(code)
+        info(self, "Langue de l'interface (Interface language)",
+             "La nouvelle langue sera utilisée au prochain démarrage du logiciel.\n"
+             "The new language will be used the next time the program starts.")
 
     def _titre(self):
         langue = self.projet.reglage("langue_vern_nom")

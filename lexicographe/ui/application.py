@@ -118,6 +118,9 @@ def main():
     app.setApplicationName(APP_NAME)
     app.setOrganizationName(APP_ID)
     appliquer_style(app)
+    from . import traduction
+    traduction.charger(traduction.langue_enregistree())
+    traduction.installer(app)
     reglages = QSettings(APP_ID, APP_ID)
 
     premier = True
