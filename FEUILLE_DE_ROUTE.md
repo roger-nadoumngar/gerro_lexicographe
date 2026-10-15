@@ -125,7 +125,7 @@ justifiées et jamais appliquées sans décision humaine.
 - [x] Liste des domaines sémantiques de SIL livrée en français et en anglais (CC BY-SA 4.0)
 - [x] Logiciel livré sans données d'une langue documentée (le corpus ngambay ne sert qu'aux tests)
 
-## Version 1.3 (en cours)
+## Version 1.3 ✅
 
 - [x] Cartes des pages Imports, Exports et Collecte dans une zone qui défile (titres plus jamais coupés)
 - [x] Clavier Keyman calculé d'après l'alphabet et le lexique du projet (lettre + ;, tons avec =),
