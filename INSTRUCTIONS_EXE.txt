@@ -25,7 +25,16 @@ Clique dans la barre d'adresse, tape "cmd" et appuie sur Entrée.
     pip install -r requirements.txt pyinstaller
 
 
-ÉTAPE 4 — Générer le .exe
+ÉTAPE 4 (recommandée) — Générer le .exe ET le programme d'installation
+---------------------------------------------------------------------
+Installer Inno Setup 6 (gratuit, https://jrsoftware.org), puis :
+
+    python outils\construire_installateur.py
+
+Résultat : dist\GerroLexicographe-Installation-<version>.exe
+
+
+ÉTAPE 4 bis — Générer seulement le .exe
 ---------------------------
     pyinstaller --noconfirm --onefile --windowed --name GerroLexicographe --add-data "lexicographe\ressources;lexicographe\ressources" app.py
 
