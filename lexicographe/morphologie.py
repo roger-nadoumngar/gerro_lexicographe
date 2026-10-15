@@ -17,9 +17,23 @@ dans le lexique.
   cet environnement est respecté ; un environnement en texte libre est seulement
   affiché.
 
-Limites assumées : les infixes et circonfixes ne sont pas encore pris en charge.
+* Redoublement : un mot fait de deux copies d'une même suite analysable (« tɔ̄l-tɔ̄l », « njálnjál »)
+  reçoit aussi la décomposition base + copie (glosée « RED »). La copie doit avoir les mêmes lettres ;
+  ses tons peuvent différer (« déréré-dèrèrè »). Un mot redoublé enregistré tel quel dans le lexique
+  reste proposé d'abord (un seul morphème).
+* Infixe (type « infix » dans le lexique) : proposé à l'intérieur d'un radical déclaré — jamais en
+  bordure —, et seulement là où son environnement formel le permet s'il en a un (« / #C _ » : après
+  la première consonne). Le radical est alors noté en deux morceaux autour de l'infixe : k‹ar›tab.
+
+* Corpus sans tons (réglage « analyse_sans_tons » déclaré dans le projet) : quand l'écriture du corpus
+  n'a pas toujours les tons ni les autres signes combinants, les formes sont aussi comparées sans ces
+  signes, mais seulement pour un mot qui n'a aucune décomposition exacte. Ces décompositions sont
+  marquées « approchées » et ne sont jamais proposées comme évidentes : le linguiste choisit.
+
+Limite assumée : les circonfixes ne sont pas encore pris en charge.
 """
 
+import unicodedata
 from dataclasses import dataclass, field
 
 from .texte import normaliser
@@ -40,26 +54,53 @@ class Morpheme:
     sens_id: int | None
     glose: str
     categorie: str
-    role: str                  # « avant », « radical », « après »
-    environnement: str = ""    # condition d'un allomorphe (affichée, pas encore appliquée)
+    role: str                  # « avant », « radical », « après », « infixe », « redoublement »
+    environnement: str = ""    # condition d'un allomorphe
+    suite: bool = False        # seconde partie d'un radical coupé par un infixe
 
 
 @dataclass
 class Decomposition:
     morphemes: list[Morpheme] = field(default_factory=list)
+    approchee: bool = False    # trouvée en ignorant les tons (corpus sans tons)
 
     @property
     def segmentation(self):
-        """« ka-kó-je » : formes séparées par des tirets."""
-        return "-".join(m.forme for m in self.morphemes)
+        """« ka-kó-je » : formes séparées par des tirets ; un infixe entre chevrons : « k‹ar›tab »."""
+        texte = ""
+        for i, m in enumerate(self.morphemes):
+            if m.role == "infixe":
+                texte += f"‹{m.forme}›"
+            elif m.suite or i == 0:
+                texte += m.forme
+            else:
+                texte += "-" + m.forme
+        return texte
 
     @property
     def gloses(self):
-        return "-".join(m.glose or "?" for m in self.morphemes)
+        texte = ""
+        for i, m in enumerate(self.morphemes):
+            if m.suite:
+                continue
+            glose = m.glose or "?"
+            texte += f"‹{glose}›" if m.role == "infixe" else (glose if i == 0 else "-" + glose)
+        return texte
 
     def cle(self):
         # les plus simples d'abord : moins de morphèmes, puis moins d'affixes
-        return (len(self.morphemes), sum(m.role != "radical" for m in self.morphemes), self.segmentation)
+        return (self.approchee, len(self.morphemes), sum(m.role != "radical" for m in self.morphemes),
+                self.segmentation)
+
+
+def _sans_signes(texte):
+    """Texte décomposé (NFD) sans ses signes combinants ; les tirets sont gardés."""
+    return "".join(c for c in unicodedata.normalize("NFD", texte) if not unicodedata.combining(c))
+
+
+def _sans_tons(texte):
+    """Lettres seules : signes combinants (tons, nasalité) et tirets retirés."""
+    return "".join(c for c in unicodedata.normalize("NFD", texte) if not unicodedata.combining(c) and c != "-")
 
 
 def _nettoyer(forme):
@@ -185,7 +226,7 @@ class Analyseur:
     """Index des formes de morphèmes du lexique ; à reconstruire après modification du lexique."""
 
     def __init__(self, conn):
-        self.formes = {"avant": {}, "radical": {}, "apres": {}}
+        self.formes = {"avant": {}, "radical": {}, "apres": {}, "infixe": {}}
         premiers_sens = {}
         for sid, eid, glose, cat in conn.execute(
                 """SELECT s.id, s.entree_id, s.glose, c.nom FROM sens s
@@ -204,8 +245,10 @@ class Analyseur:
                 roles = ["apres"]
             elif type_morph in LES_DEUX:
                 roles = ["avant", "apres"]
+            elif type_morph == "infix":
+                roles = ["infixe"]
             elif type_morph in NON_RADICAUX:
-                continue  # infixes et circonfixes : pas encore pris en charge
+                continue  # circonfixes : pas encore pris en charge
             else:
                 roles = ["radical"]
             variantes = [(forme, ""), (citation, "")] + allomorphes.get(eid, [])
@@ -214,13 +257,25 @@ class Analyseur:
                 if not f:
                     continue
                 for role in roles:
-                    m = Morpheme(f, eid, sid, glose, cat, "radical" if role == "radical" else role, env)
+                    m = Morpheme(f, eid, sid, glose, cat, role, env)
                     liste = self.formes[role].setdefault(f, [])
-                    if all(x.entree_id != eid for x in liste):
+                    deja = next((i for i, x in enumerate(liste) if x.entree_id == eid), None)
+                    if deja is None:
                         liste.append(m)
+                    elif env and not liste[deja].environnement:
+                        # un allomorphe de même forme avec un environnement déclaré : sa condition s'applique
+                        liste[deja] = m
         self.longueurs = {role: sorted({len(f) for f in d}, reverse=True) for role, d in self.formes.items()}
         ligne = conn.execute("SELECT valeur FROM projet WHERE cle='classes_phonologiques'").fetchone()
         self.classes = lire_classes(ligne[0] if ligne else "")
+        ligne = conn.execute("SELECT valeur FROM projet WHERE cle='analyse_sans_tons'").fetchone()
+        self.sans_tons = bool(ligne and ligne[0] == "1")
+        # mêmes formes, indexées sans leurs signes combinants (corpus écrit sans tons)
+        self.formes_st = {role: {} for role in self.formes}
+        for role, d in self.formes.items():
+            for f, liste in d.items():
+                self.formes_st[role].setdefault(_sans_signes(f), []).extend(liste)
+        self.longueurs_st = {role: sorted({len(f) for f in d}, reverse=True) for role, d in self.formes_st.items()}
         self._environnements = {}
 
     def environnement(self, texte):
@@ -228,10 +283,10 @@ class Analyseur:
             self._environnements[texte] = Environnement(texte, self.classes)
         return self._environnements[texte]
 
-    def _respecte_environnements(self, mot, decomposition):
+    def _respecte_environnements(self, mot, decomposition, longueur=len):
         position = 0
         for m in decomposition.morphemes:
-            fin = position + len(m.forme)
+            fin = position + longueur(m.forme)
             if m.environnement and not self.environnement(m.environnement).accepte(mot[:position], mot[fin:]):
                 return False
             position = fin
@@ -240,6 +295,55 @@ class Analyseur:
     def analyser(self, mot):
         """Toutes les décompositions du mot, les plus simples d'abord."""
         mot = _nettoyer(mot)
+        resultats = self._analyser(mot) + self._redoublements(mot)
+        if self.sans_tons and not resultats:   # seulement pour un mot sans aucune analyse exacte
+            resultats = self._approchees(mot)
+        uniques = {}
+        for d in resultats:
+            uniques.setdefault(tuple((m.forme, m.entree_id, m.role) for m in d.morphemes), d)
+        return sorted(uniques.values(), key=Decomposition.cle)[:MAX_RESULTATS]
+
+    def _approchees(self, mot):
+        """Décompositions trouvées sans les signes combinants, remises dans la forme écrite du mot."""
+        decompose = unicodedata.normalize("NFD", mot)
+        # position, dans le mot décomposé, de chaque lettre du mot sans signes
+        positions = [i for i, c in enumerate(decompose) if not unicodedata.combining(c)]
+        nu = "".join(decompose[i] for i in positions)
+        resultats = []
+        for d in self._analyser(nu, self.formes_st, self.longueurs_st, lambda f: len(_sans_signes(f))):
+            morphemes, debut = [], 0
+            for m in d.morphemes:
+                fin = debut + len(_sans_signes(m.forme))
+                a = positions[debut]
+                b = positions[fin] if fin < len(positions) else len(decompose)   # signes de la dernière lettre inclus
+                forme = unicodedata.normalize("NFC", decompose[a:b])
+                morphemes.append(Morpheme(forme, m.entree_id, m.sens_id, m.glose, m.categorie, m.role,
+                                          m.environnement, m.suite))
+                debut = fin
+            resultats.append(Decomposition(morphemes, approchee=True))
+        return resultats
+
+    def _redoublements(self, mot):
+        """« tɔ̄l-tɔ̄l » = base « tɔ̄l » (analysée) + copie « RED » ; tons de la copie libres."""
+        resultats = []
+        for i in range(2, len(mot) - 1):
+            for separateur in ("-", ""):
+                base, copie = mot[:i], mot[i + len(separateur):]
+                if not mot[i:].startswith(separateur) or len(copie) < 2 or "-" in base or copie.startswith("-"):
+                    continue
+                if unicodedata.combining(mot[i]):   # jamais entre une lettre et ses accents
+                    continue
+                if _sans_tons(base) != _sans_tons(copie):
+                    continue
+                for d in self._analyser(base)[:5]:
+                    radical = next((m for m in d.morphemes if m.role == "radical"), d.morphemes[0])
+                    red = Morpheme(copie, radical.entree_id, radical.sens_id, "RED", "", "redoublement")
+                    resultats.append(Decomposition(d.morphemes + [red]))
+        return resultats
+
+    def _analyser(self, mot, formes=None, longueurs=None, longueur=len):
+        formes = formes or self.formes
+        longueurs = longueurs or self.longueurs
         resultats = []
 
         def prefixes(debut, pris):
@@ -247,16 +351,38 @@ class Analyseur:
             radical(debut, pris)
             if len([m for m in pris if m.role == "avant"]) >= MAX_AFFIXES:
                 return
-            for n in self.longueurs["avant"]:
+            for n in longueurs["avant"]:
                 if debut + n < len(mot):  # un préfixe ne peut pas être le mot entier
-                    for m in self.formes["avant"].get(mot[debut:debut + n], []):
+                    for m in formes["avant"].get(mot[debut:debut + n], []):
                         prefixes(debut + n, pris + [m])
 
         def radical(debut, pris):
-            for n in self.longueurs["radical"]:
+            for n in longueurs["radical"]:
                 if debut + n <= len(mot):
-                    for m in self.formes["radical"].get(mot[debut:debut + n], []):
+                    for m in formes["radical"].get(mot[debut:debut + n], []):
                         suffixes(debut + n, pris + [m], 0)
+            avec_infixe(debut, pris)
+
+        def avec_infixe(debut, pris):
+            # radical déclaré coupé par un infixe déclaré, jamais en bordure : k‹ar›tab
+            for forme_inf, infixes in formes["infixe"].items():
+                k = len(forme_inf)
+                position = mot.find(forme_inf, debut + 1)
+                while position != -1:
+                    if unicodedata.combining(mot[position]) or (position + k < len(mot)
+                                                               and unicodedata.combining(mot[position + k])):
+                        position = mot.find(forme_inf, position + 1)   # jamais entre une lettre et ses accents
+                        continue
+                    for fin in range(position + k + 1, len(mot) + 1):
+                        base = mot[debut:position] + mot[position + k:fin]
+                        for r in formes["radical"].get(base, []):
+                            avant_inf = Morpheme(mot[debut:position], r.entree_id, r.sens_id, r.glose, r.categorie,
+                                                 "radical")
+                            apres_inf = Morpheme(mot[position + k:fin], r.entree_id, r.sens_id, r.glose,
+                                                 r.categorie, "radical", suite=True)
+                            for inf in infixes:
+                                suffixes(fin, pris + [avant_inf, inf, apres_inf], 0)
+                    position = mot.find(forme_inf, position + 1)
 
         def suffixes(debut, pris, compte):
             if len(resultats) >= MAX_RESULTATS * 4:
@@ -266,15 +392,11 @@ class Analyseur:
                 return
             if compte >= MAX_AFFIXES:
                 return
-            for n in self.longueurs["apres"]:
+            for n in longueurs["apres"]:
                 if debut + n <= len(mot):
-                    for m in self.formes["apres"].get(mot[debut:debut + n], []):
+                    for m in formes["apres"].get(mot[debut:debut + n], []):
                         suffixes(debut + n, pris + [m], compte + 1)
 
         prefixes(0, [])
-        # un allomorphe dont l'environnement (formel) n'est pas respecté est écarté
-        resultats = [d for d in resultats if self._respecte_environnements(mot, d)]
-        uniques = {}
-        for d in resultats:
-            uniques.setdefault(tuple((m.forme, m.entree_id) for m in d.morphemes), d)
-        return sorted(uniques.values(), key=Decomposition.cle)[:MAX_RESULTATS]
+        # un allomorphe ou un infixe dont l'environnement (formel) n'est pas respecté est écarté
+        return [d for d in resultats if self._respecte_environnements(mot, d, longueur)]

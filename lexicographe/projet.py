@@ -36,6 +36,8 @@ REGLAGES_PAR_DEFAUT = {
     "police_vern": "",
     # classes pour les environnements d'allomorphes : « V = a e i o u ; N = m n ŋ »
     "classes_phonologiques": "",
+    # « 1 » : le corpus n'écrit pas toujours les tons ; l'analyseur compare aussi sans les signes combinants
+    "analyse_sans_tons": "0",
 }
 
 

@@ -135,9 +135,14 @@ justifiées et jamais appliquées sans décision humaine.
 - [x] Application Android construite depuis le logiciel avec Dictionary App Builder (installé) : projet DAB
       créé par DAB lui-même, relié au LIFT, photos déclarées, icône et « À propos », signature avec le
       keystore de l'utilisateur (mots de passe masqués) ; essai réel : APK ngambay de 12,6 Mo en 1 minute
+- [x] Analyseur : redoublement (base + copie « RED », tons de la copie libres), infixes déclarés (jamais en
+      bordure, environnement respecté, affichage k‹ar›tab) ; jamais de coupure entre une lettre et ses accents
+- [x] Réglage « le corpus n'écrit pas toujours les tons » : pour un mot sans analyse exacte, comparaison sans
+      les signes combinants ; propositions marquées « tons différents », jamais évidentes (ngambay : mots
+      inconnus du corpus de 49 % à 24 %)
 
 ## Points restants
 
-- Infixes, circonfixes, redoublement dans l'analyseur
+- Circonfixes et redoublement partiel (CV-) dans l'analyseur
 - Analyses du glossaire interlinéaire de Paratext reprises dans les textes
 - Export Webonary ; sons dans l'application Android

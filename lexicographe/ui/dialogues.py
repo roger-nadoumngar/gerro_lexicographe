@@ -298,6 +298,10 @@ class DialogueReglages(QDialog):
         self.classes.setFixedHeight(70)
         f.addRow(aide_classes)
         f.addRow("Classes :", self.classes)
+        self.sans_tons = QCheckBox("Le corpus n'écrit pas toujours les tons : l'analyse compare aussi les mots "
+                                   "sans tons ni autres accents (propositions marquées « tons différents », à choisir)")
+        self.sans_tons.setChecked(r.get("analyse_sans_tons") == "1")
+        f.addRow(self.sans_tons)
         f.addRow(self.avec_police)
         f.addRow("Police :", self.police)
         onglets.addTab(ecriture, "Écriture")
@@ -496,6 +500,7 @@ class DialogueReglages(QDialog):
             "classes_phonologiques": " ; ".join(l.strip() for l in self.classes.toPlainText().splitlines()
                                                 if "=" in l),
             "police_vern": self.police.currentFont().family() if self.avec_police.isChecked() else "",
+            "analyse_sans_tons": "1" if self.sans_tons.isChecked() else "0",
         }
         avant = self.projet.reglages
         self.decoupage_modifie = any(avant.get(k) != valeurs[k] for k in self.CLES_DECOUPAGE)
