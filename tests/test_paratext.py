@@ -113,6 +113,15 @@ def test_glossaire(projet, racine_pt):
     assert paratext.importer_glossaire(projet, sba).sens == 0, "réimporter n'ajoute rien"
 
 
+def test_glossaire_mot_et_radical_comptent_ensemble(projet, racine_pt):
+    """Une entrée « radical » (après fusion de doublons, par exemple) n'est pas recréée en « mot »."""
+    conn = projet.conn
+    lexique.enregistrer_entree(conn, Entree(forme="bɔ", type_morph="stem", sens=[Sens(glose="père")]))
+    sba = next(p for p in paratext.lister_projets(str(racine_pt)) if p.nom == "sbanb")
+    paratext.importer_glossaire(projet, sba)
+    assert len(lexique.chercher_par_forme(conn, "bɔ")) == 1
+
+
 def test_termes_bibliques(projet, racine_pt):
     conn = projet.conn
     sba = next(p for p in paratext.lister_projets(str(racine_pt)) if p.nom == "sbanb")
