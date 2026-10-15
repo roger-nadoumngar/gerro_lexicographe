@@ -69,6 +69,7 @@ T = {
     "{} relation(s) et composant(s), {} image(s).": "{} relation(s) and component(s), {} image(s).",
     "{} sur {}": "{} of {}",
     "{} à faire": "{} to do",
+    "Guide d'utilisation": "User guide",
     "{} — {} [{}], {} livre(s){}": "{} — {} [{}], {} book(s){}",
     "{}.  {}    +{} mots  ({} %)": "{}.  {}    +{} words  ({} %)",
 }

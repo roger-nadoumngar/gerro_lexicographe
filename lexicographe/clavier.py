@@ -30,6 +30,8 @@ TABLE_BASES = [
     ("ɸ", "f"), ("ɣ", "g"), ("ɠ", "g"), ("ɦ", "h"), ("ɨ", "i"), ("ɩ", "i"), ("ƙ", "k"),
     ("ŋ", "n"), ("ɲ", "n"), ("ɔ", "o"), ("ɾ", "r"), ("ɽ", "r"), ("ʃ", "s"), ("ƭ", "t"),
     ("ʉ", "u"), ("ʊ", "u"), ("ʋ", "v"), ("ʌ", "v"), ("ƴ", "y"), ("ʒ", "z"), ("ʔ", "q"),
+    # coup de glotte écrit comme une lettre : saltillo (kenga…) et apostrophe-lettre, tapés « '; »
+    ("ꞌ", "'"), ("ʼ", "'"),
 ]
 
 # signe combinant → (code tapé après « = », nom)
@@ -148,7 +150,8 @@ def construire_kmn(inv, nom_langue, ident, version="1.0"):
     for l in inv.lettres:
         par_base.setdefault(l.base, []).append(l)
     for base, groupe in par_base.items():
-        for casse in ("min", "maj"):
+        # une base sans majuscule (apostrophe) n'a qu'une suite : sinon deux règles identiques
+        for casse in ("min", "maj") if base.upper() != base else ("min",):
             chaine = [base if casse == "min" else base.upper()] + [
                 l.caractere if casse == "min" else (l.majuscule or l.caractere) for l in groupe]
             for avant, apres in zip(chaine, chaine[1:]):

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guide d'utilisation — Gerro Lexicographe</title>
+<style>
+:root { --fond:#f6f1e7; --carte:#fffdf8; --texte:#2a2620; --doux:#6d655a; --accent:#1f5c55; --ligne:#e2d9c8; }
+@media (prefers-color-scheme: dark) { :root { --fond:#1d1b18; --carte:#26231f; --texte:#ece6da; --doux:#a89f92; --accent:#7cc4b8; --ligne:#3a352e; } }
+body { margin:0; background:var(--fond); color:var(--texte); font-family:"Charis SIL", Georgia, serif; line-height:1.6; }
+header { background:var(--accent); color:#fff; padding:22px 16px; }
+header h1 { margin:0 auto; max-width:860px; font-size:1.7rem; }
+header p { margin:4px auto 0; max-width:860px; opacity:.9; }
+main { max-width:860px; margin:0 auto; padding:10px 16px 50px; }
+nav { background:var(--carte); border:1px solid var(--ligne); border-radius:10px; padding:10px 18px; margin:16px 0; }
+nav ol { margin:6px 0; padding-left:20px; }
+h2 { color:var(--accent); border-bottom:1px solid var(--ligne); padding-bottom:4px; margin-top:34px; }
+h3 { margin-bottom:4px; }
+.regle { background:var(--carte); border-left:4px solid var(--accent); padding:8px 14px; border-radius:6px; }
+.chemin { font-family: Consolas, monospace; font-size:.92em; background:var(--carte); border:1px solid var(--ligne); border-radius:4px; padding:0 4px; }
+table { border-collapse:collapse; width:100%; }
+td, th { border:1px solid var(--ligne); padding:6px 8px; vertical-align:top; text-align:left; }
+th { background:var(--carte); }
+a { color:var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Gerro Lexicographe — Guide d'utilisation</h1>
+  <p>Lexique, textes, analyse, collecte, syllabaire et publication (imprimé, site web, application Android, clavier) pour les langues documentées.</p>
+</header>
+<main>
+<nav><b>Sommaire</b>
+<ol>
+  <li><a href="#principe">Le principe : des règles, pas de devinettes</a></li>
+  <li><a href="#demarrer">Démarrer : créer ou reprendre un projet</a></li>
+  <li><a href="#pages">Les pages du logiciel</a></li>
+  <li><a href="#importer">Importer des données</a></li>
+  <li><a href="#lexique">Travailler le lexique</a></li>
+  <li><a href="#textes">Analyser les textes</a></li>
+  <li><a href="#collecte">Collecter avec des locuteurs</a></li>
+  <li><a href="#syllabaire">Préparer un syllabaire</a></li>
+  <li><a href="#publier">Publier</a></li>
+  <li><a href="#donnees">Données, sauvegardes, travail à plusieurs</a></li>
+  <li><a href="#questions">Questions fréquentes</a></li>
+</ol></nav>
+
+<h2 id="principe">1. Le principe : des règles, pas de devinettes</h2>
+<p>Le logiciel ne décide jamais à la place du linguiste. Il applique des règles que vous déclarez (alphabet, caractères des mots, classes de sons, traits grammaticaux…) et vous <b>propose</b> des résultats en montrant sur quoi ils reposent. Rien n'entre dans le lexique comme « validé » sans votre décision.</p>
+<p class="regle">Les fichiers que vous importez (FLEx, Paratext, LIFT, Word…) ne sont <b>jamais modifiés</b> : ils sont seulement lus. Avant chaque import ou fusion importante, le projet est sauvegardé automatiquement.</p>
+
+<h2 id="demarrer">2. Démarrer : créer ou reprendre un projet</h2>
+<p>Un <b>projet</b> documente une langue et tient dans un seul fichier <span class="chemin">.lexique</span>. Au lancement, choisissez :</p>
+<ul>
+  <li><b>Nouveau projet</b> : nom de la langue, code ISO 639-3 (par exemple <i>sba</i> pour le ngambay, voir ethnologue.com), langue d'analyse (français ou anglais).</li>
+  <li><b>Importer un projet FLEx</b> : le logiciel trouve les projets FLEx de l'ordinateur et reprend lexique, textes et analyses interlinéaires.</li>
+  <li><b>Ouvrir</b> un projet existant.</li>
+</ul>
+<p>Chaque nouveau projet reçoit la liste des <b>domaines sémantiques</b> de SIL (1 792 domaines, questions de collecte en français et en anglais).</p>
+<p>Réglez ensuite le projet : <b>Fichier → Réglages du projet</b>.</p>
+<table>
+<tr><th>Onglet</th><th>À régler</th></tr>
+<tr><td>Langues</td><td>noms et codes des langues.</td></tr>
+<tr><td>Écriture</td><td><b>alphabet</b> dans l'ordre (multigraphes compris : <i>a b ɓ d … ng ŋ ŋg</i>), caractères qui font partie des mots (apostrophe, tiret), police, classes de sons pour les allomorphes, et la case « le corpus n'écrit pas toujours les tons ».</td></tr>
+<tr><td>Catégories, Traits</td><td>catégories grammaticales et traits (classe nominale, ton…) avec leurs valeurs permises.</td></tr>
+</table>
+<p>La langue des menus se choisit dans <b>Fichier → Langue de l'interface</b> (français ou anglais).</p>
+
+<h2 id="pages">3. Les pages du logiciel</h2>
+<table>
+<tr><th>Page</th><th>Rôle</th></tr>
+<tr><td>Tableau de bord</td><td>Chiffres du projet, contrôles (lettres d'un autre alphabet), contradictions entre lexique et corpus.</td></tr>
+<tr><td>Lexique</td><td>Entrées complètes : forme, prononciation, sens, exemples, variantes, relations, images, sons. Modification en masse, doublons.</td></tr>
+<tr><td>Domaines</td><td>Domaines sémantiques, questions d'élicitation, mots classés.</td></tr>
+<tr><td>Index inverse</td><td>Partie français → langue du dictionnaire.</td></tr>
+<tr><td>Textes</td><td>Interlinéaire : chaque mot avec ses morphèmes et gloses.</td></tr>
+<tr><td>Formes de mots, Concordance</td><td>Mots du corpus par fréquence ; un mot ou morphème dans son contexte.</td></tr>
+<tr><td>Collecte</td><td>Travail avec des locuteurs : par domaine, par liste de mots, tâches à compléter, enregistrement audio.</td></tr>
+<tr><td>Syllabaire</td><td>Ordre d'enseignement des lettres et leçons.</td></tr>
+<tr><td>Validation</td><td>Propositions de traduction tirées du corpus parallèle.</td></tr>
+<tr><td>Corpus, Imports, Exports</td><td>Phrases parallèles ; tous les imports ; toutes les publications.</td></tr>
+</table>
+
+<h2 id="importer">4. Importer des données</h2>
+<p>Page <b>Imports</b> :</p>
+<ul>
+  <li><b>Projet Paratext</b> : livres traduits (corpus), glossaire, rendus des termes bibliques et <b>analyses de l'interlinéaire</b>. Pour un corpus parallèle, importez le projet dans la langue documentée, puis une Bible dans la langue d'analyse (« Bible complète »).</li>
+  <li><b>Bible complète</b> : un dossier ou une archive .zip en USFM ou USX (par exemple Louis Segond 1910 sur eBible.org, domaine public).</li>
+  <li><b>Dictionnaire imprimé</b> : un dictionnaire converti en Word ou en texte, présenté comme ceux du Projet Sara-Baguirmi. Une simulation est montrée avant l'import ; il complète les entrées et répare les gloses coupées.</li>
+  <li><b>Fichier LIFT</b>, <b>Texte de terrain</b>, <b>Document Word / PDF</b>, <b>Enregistrement audio</b>, <b>Travail d'un autre poste</b> (fusion).</li>
+</ul>
+
+<h2 id="lexique">5. Travailler le lexique</h2>
+<ul>
+  <li>Une entrée a une forme, éventuellement une forme de citation et une prononciation, un type (radical, préfixe, suffixe, infixe…), un statut (<i>brouillon</i>, <i>à vérifier</i>, <i>validé</i>) et des sens (glose, définition, catégorie, domaines, exemples).</li>
+  <li><b>Doublons…</b> (en bas de la liste) : entrées de même forme et de même type avec au moins une glose commune ; la fusion reporte tout sur l'entrée gardée, rien n'est perdu.</li>
+  <li><b>Modifier la sélection…</b> : changer le statut, la catégorie ou le domaine de plusieurs entrées.</li>
+  <li>Tableau de bord → <b>Voir et corriger…</b> : lettres d'un autre alphabet qui imitent des lettres latines (у cyrillique pour y…).</li>
+</ul>
+
+<h2 id="textes">6. Analyser les textes</h2>
+<p>Page <b>Textes</b> : cliquez sur un mot. L'analyseur propose les découpes possibles à partir des morphèmes déclarés au lexique (préfixes, radicaux, suffixes, clitiques, infixes, redoublement). Couleurs : <b>vert</b> = analyse validée, <b>ocre</b> = une seule proposition, <b>rouille</b> = plusieurs découpes, <b>gris</b> = inconnu.</p>
+<ul>
+  <li>Si le corpus n'écrit pas toujours les tons, cochez la case correspondante dans les réglages : les mots sans analyse exacte sont aussi comparés sans les tons, et marqués « tons différents : à vérifier ».</li>
+  <li>Une condition d'allomorphe s'écrit <i>/ N _</i> (après une nasale), <i>/ _ #</i> (en fin de mot), avec les classes de sons déclarées.</li>
+  <li>Page <b>Validation</b> : le moteur propose une traduction pour chaque mot du corpus parallèle, avec les phrases qui la justifient.</li>
+</ul>
+
+<h2 id="collecte">7. Collecter avec des locuteurs</h2>
+<ul>
+  <li><b>Par domaine</b> : une question à la fois (« Quels mots désignent les parties du corps ? »).</li>
+  <li><b>Par liste de mots</b> : importez une liste Word ou texte (une ligne ou une rangée de tableau par mot) ; le locuteur donne le mot dans sa langue ; les mots déjà connus sont montrés.</li>
+  <li><b>Tâches</b> : sens, exemples, domaines ou prononciations manquants, une entrée à la fois.</li>
+  <li><b>Mode locuteur</b> : plein écran, gros caractères.</li>
+</ul>
+<p>Les mots collectés sont des brouillons, à vérifier ensuite dans le Lexique.</p>
+
+<h2 id="syllabaire">8. Préparer un syllabaire</h2>
+<p>Page <b>Syllabaire</b> : le logiciel compte les graphèmes du corpus et propose un ordre d'enseignement (à chaque leçon, la lettre qui rend lisibles le plus de nouveaux mots). Vous pouvez réordonner. Export en livret PDF ou pour l'outil « Decodable Reader » de Bloom.</p>
+
+<h2 id="publier">9. Publier</h2>
+<table>
+<tr><th>Exports</th><th>Résultat</th></tr>
+<tr><td>Dictionnaire imprimé (PDF)</td><td>Deux colonnes, lettres de l'alphabet du projet, mots-guides, index inverse ; aperçu avant impression.</td></tr>
+<tr><td>Dictionnaire (Word)</td><td>Même contenu, modifiable dans Word ou LibreOffice.</td></tr>
+<tr><td>Site web du dictionnaire</td><td>Dossier à mettre chez un hébergeur ou sur une clé USB ; recherche dans les deux langues, avec ou sans tons.</td></tr>
+<tr><td>Application Android</td><td>Construite avec Dictionary App Builder (SIL, gratuit) installé sur l'ordinateur ; signée avec votre <i>keystore</i>. <b>Gardez toujours le même keystore</b> pour une même application.</td></tr>
+<tr><td>Clavier Keyman</td><td>Calculé d'après votre alphabet : lettre + <b>;</b> pour les lettres spéciales (b; → ɓ), <b>=</b> puis un code pour les tons (a=h → á, a=m → ā, a=b → à). Aide imprimable fournie.</td></tr>
+<tr><td>LIFT, JSON, CSV, texte</td><td>Échange avec FLEx, WeSay et d'autres programmes. Pour Webonary : exportez en LIFT, importez dans FLEx, puis « Upload to Webonary ».</td></tr>
+</table>
+<p>Seules les entrées des statuts choisis sont publiées (par défaut : <i>à vérifier</i> et <i>validé</i>, pas les brouillons).</p>
+
+<h2 id="donnees">10. Données, sauvegardes, travail à plusieurs</h2>
+<ul>
+  <li>Projets : <span class="chemin">%LOCALAPPDATA%\GerroLexicographe\Projets</span> ; sauvegardes automatiques : dossier <span class="chemin">Sauvegardes</span> à côté (menu Fichier → Ouvrir le dossier des sauvegardes).</li>
+  <li><b>Fichier → Enregistrer une copie du projet</b> fait une copie cohérente, même pendant le travail.</li>
+  <li>Plusieurs ordinateurs : copiez le projet sur l'autre poste, travaillez, puis <b>Imports → Travail d'un autre poste</b> : les nouvelles entrées sont ajoutées ; pour une entrée modifiée des deux côtés, la version la plus récente l'emporte.</li>
+</ul>
+
+<h2 id="questions">11. Questions fréquentes</h2>
+<h3>Un mot avec apostrophe est coupé en deux (« dee’g »).</h3>
+<p>Ajoutez l'apostrophe aux caractères des mots : Réglages → Écriture.</p>
+<h3>Le lexique ne suit pas l'ordre de mon alphabet.</h3>
+<p>Déclarez l'alphabet dans l'ordre, multigraphes compris, dans Réglages → Écriture.</p>
+<h3>Beaucoup de mots du corpus sont « inconnus ».</h3>
+<p>Vérifiez que le lexique et le corpus suivent la même orthographe ; si le corpus n'écrit pas les tons, cochez « le corpus n'écrit pas toujours les tons ». Analysez d'abord les mots les plus fréquents (page Formes de mots).</p>
+<h3>L'application Android ne se construit pas.</h3>
+<p>Ouvrez une fois Dictionary App Builder pour qu'il installe Java et le SDK Android ; vérifiez le keystore et son mot de passe. Le journal de DAB s'affiche en cas d'échec.</p>
+<p style="margin-top:40px;color:var(--doux)">Domaines sémantiques : SIL Global, semdom.org, licence CC BY-SA 4.0.</p>
+</main>
+</body>
+</html>

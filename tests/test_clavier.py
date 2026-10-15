@@ -33,6 +33,16 @@ def test_deux_lettres_sur_la_meme_base(projet_tons):
     assert "U+025B + ';' > U+0065 ';'" in kmn, "un ; de plus rend « e; »"
 
 
+def test_saltillo(projet):
+    """Coup de glotte écrit comme une lettre (kenga) : « '; » ; une seule règle, la base n'a pas de majuscule."""
+    for _ in range(10):
+        lexique.enregistrer_entree(projet.conn, Entree(forme="kaꞌa", sens=[Sens(glose="x")]))
+    inv = clavier.inventaire(projet.conn)
+    assert [(l.caractere, l.sequence) for l in inv.lettres] == [("ꞌ", "';")] and inv.sans_base == []
+    kmn = clavier.construire_kmn(inv, "Kenga", "gerro_kenga")
+    assert kmn.count("U+0027 + ';' >") == 1
+
+
 def test_source_keyman(projet_tons):
     inv = clavier.inventaire(projet_tons.conn, projet_tons.reglage("alphabet_vern"))
     kmn = clavier.construire_kmn(inv, "Ngambay", "gerro_ngambay")
