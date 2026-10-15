@@ -190,6 +190,19 @@ def importer_livres(projet_lex, projet_pt, livres, cote, rapport=None):
 
 # -- glossaire et termes bibliques ------------------------------------------------------------
 
+def _meme_type(a, b):
+    """Mot, radical et racine comptent ensemble (même règle que pour les doublons) ; un affixe ne
+    se confond qu'avec un affixe du même type."""
+    mots = ("", "stem", "root", None)
+    return (a in mots and b in mots) or a == b
+
+
+def _chercher_sans_casse(conn, forme):
+    """Entrées de cette forme, majuscule initiale ou majuscules ignorées (« gin » trouve « Gin »)."""
+    variantes = dict.fromkeys((forme, forme.lower(), forme[:1].upper() + forme[1:].lower(), forme.upper()))
+    return list(dict.fromkeys(eid for v in variantes for eid in lexique.chercher_par_forme(conn, v)))
+
+
 def _ajouter_sens(conn, forme, glose, type_morph="", categorie_id=None, definition="", note="", exemple=None,
                   statut="à vérifier", r=None):
     """Ajoute le sens à l'entrée de même forme (et même type) s'il n'y est pas déjà ;
@@ -198,9 +211,9 @@ def _ajouter_sens(conn, forme, glose, type_morph="", categorie_id=None, definiti
     glose = normaliser(glose).strip()
     if not forme or not glose:
         return False
-    for eid in lexique.chercher_par_forme(conn, forme):
+    for eid in _chercher_sans_casse(conn, forme):
         e = lexique.lire_entree(conn, eid)
-        if (e.type_morph or "") != (type_morph or ""):
+        if not _meme_type(e.type_morph, type_morph):
             continue
         if any(s.glose.strip().lower() == glose.lower() for s in e.sens):
             return False
@@ -304,9 +317,9 @@ def importer_interlineaire(projet_lex, projet_pt, rapport=None):
             cache_sens[id_pt] = None
             if id_pt in sens_pt:
                 type_morph, entree, _, glose = sens_pt[id_pt]
-                for eid in lexique.chercher_par_forme(conn, entree):
+                for eid in _chercher_sans_casse(conn, entree):
                     e = lexique.lire_entree(conn, eid)
-                    if (e.type_morph or "") != (type_morph or ""):
+                    if not _meme_type(e.type_morph, type_morph):
                         continue
                     s = next((s for s in e.sens if s.glose.strip().lower() == glose.lower()), None)
                     if s:
