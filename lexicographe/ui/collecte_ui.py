@@ -7,7 +7,8 @@ from datetime import datetime
 from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (QComboBox, QDialog, QFileDialog, QFrame, QGridLayout, QHBoxLayout, QInputDialog,
-                               QLabel, QLineEdit, QListWidget, QPushButton, QStackedWidget, QVBoxLayout, QWidget)
+                               QLabel, QLineEdit, QListWidget, QPushButton, QScrollArea, QStackedWidget, QVBoxLayout,
+                               QWidget)
 
 from .. import collecte, domaines, lexique
 from .commun import carte, confirmer, erreur, info
@@ -578,7 +579,16 @@ class Collecte(QWidget):
             cv.addWidget(b, 0, Qt.AlignLeft)
             grille.addWidget(c, i // 2, i % 2)
             self.cartes[cle] = compte
-        self.pile.addWidget(accueil)
+        grille.setRowStretch(grille.rowCount(), 1)
+        # l'accueil défile quand la fenêtre est basse : les cartes ne sont jamais écrasées
+        defilement = QScrollArea()
+        defilement.setWidgetResizable(True)
+        defilement.setFrameShape(QFrame.NoFrame)
+        defilement.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        accueil.setObjectName("accueilCollecte")
+        defilement.setStyleSheet("QScrollArea, #accueilCollecte { background: transparent; }")
+        defilement.setWidget(accueil)
+        self.pile.addWidget(defilement)
         self.par_domaine = CollecteDomaine(projet)
         self.fiche = TacheFiche(projet)
         self.par_liste = CollecteListe(projet)
