@@ -988,9 +988,13 @@ class PageExports(Page):
         for nom, extension, filtre, fonction, aide in self.PUBLICATIONS:
             self._carte(nom, aide, "Publier…",
                         lambda _=False, e=extension, f=filtre, fn=fonction: self._publier(e, f, fn))
-        self._carte("Application Android (Dictionary App Builder)",
-                    "Dossier prêt à importer dans Dictionary App Builder (SIL) : le dictionnaire au format LIFT avec "
-                    "ses sons et ses images, et le mode d'emploi.", "Préparer…", self._preparer_dab)
+        self._carte("Application Android",
+                    "Construit l'application (.apk) avec Dictionary App Builder (SIL), installé sur cet ordinateur : "
+                    "lexique, images, icône, page « À propos », signature avec votre keystore. Le projet DAB reste "
+                    "disponible pour d'autres réglages (couleurs, sons…).", "Construire…", self._android)
+        self._carte("Dossier pour Dictionary App Builder",
+                    "Seulement le dictionnaire au format LIFT avec ses sons et ses images, et le mode d'emploi, "
+                    "pour faire l'application à la main dans Dictionary App Builder.", "Préparer…", self._preparer_dab)
         self._carte("Clavier Keyman", "Clavier pour taper la langue sur Windows, macOS et Linux (AZERTY ou "
                                       "QWERTY), calculé d'après l'alphabet et le lexique du projet : lettre + ; "
                                       "(b; → ɓ), tons après la lettre avec = (a=h → á). Paquet installable si "
@@ -1056,6 +1060,10 @@ class PageExports(Page):
         info(self, "Application Android", "Dossier prêt pour Dictionary App Builder :\n"
                                           f"{os.path.dirname(lift)}\n\nLis le fichier LISEZ-MOI.txt qu'il contient.")
         QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.dirname(lift)))
+
+    def _android(self):
+        from .android_ui import construire_appli
+        construire_appli(self, self.projet)
 
     def _clavier(self):
         from .. import clavier
