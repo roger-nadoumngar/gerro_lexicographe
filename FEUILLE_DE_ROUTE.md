@@ -132,9 +132,12 @@ justifiées et jamais appliquées sans décision humaine.
       AZERTY ou QWERTY, compilé en paquet installable si Keyman Developer est présent, aide imprimable
 - [x] Contrôle des lettres d'un autre alphabet (у cyrillique pour y…) sur le tableau de bord, correction
       à la demande selon une table de sosies, avec sauvegarde avant
+- [x] Application Android construite depuis le logiciel avec Dictionary App Builder (installé) : projet DAB
+      créé par DAB lui-même, relié au LIFT, photos déclarées, icône et « À propos », signature avec le
+      keystore de l'utilisateur (mots de passe masqués) ; essai réel : APK ngambay de 12,6 Mo en 1 minute
 
 ## Points restants
 
 - Infixes, circonfixes, redoublement dans l'analyseur
 - Analyses du glossaire interlinéaire de Paratext reprises dans les textes
-- Export Webonary ; projet Dictionary App Builder complet
+- Export Webonary ; sons dans l'application Android

@@ -558,6 +558,24 @@ def test_lettres_d_un_autre_alphabet(fenetre, messages):
     assert page.ligne_sosies.isHidden()
 
 
+def test_dialogue_application_android(fenetre, tmp_path, messages):
+    from lexicographe.ui.android_ui import DialogueAppli
+    d = DialogueAppli(fenetre.projet)
+    assert d.paquet.text() == "org.gerro.sba.dictionnaire"
+    assert d.mdp.echoMode() == d.mdp.EchoMode.Password, "mot de passe masqué"
+    d.keystore.champ.setText("")
+    d._accepter()
+    assert messages and messages[-1][0] == "erreur", "sans keystore : refus clair"
+    cle = tmp_path / "cle.keystore"
+    cle.write_bytes(b"x")
+    d.keystore.champ.setText(str(cle))
+    d.alias.setText("key1")
+    d.mdp.setText("abc")
+    d._accepter()
+    o = d.options()
+    assert (o.keystore, o.alias, o.mot_de_passe, o.langue_interface) == (str(cle), "key1", "abc", "fr")
+
+
 def test_clavier_keyman(fenetre, tmp_path, monkeypatch, messages):
     from PySide6.QtGui import QDesktopServices
     from PySide6.QtWidgets import QFileDialog
