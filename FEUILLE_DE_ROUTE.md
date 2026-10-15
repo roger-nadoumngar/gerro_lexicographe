@@ -140,9 +140,11 @@ justifiées et jamais appliquées sans décision humaine.
 - [x] Réglage « le corpus n'écrit pas toujours les tons » : pour un mot sans analyse exacte, comparaison sans
       les signes combinants ; propositions marquées « tons différents », jamais évidentes (ngambay : mots
       inconnus du corpus de 49 % à 24 %)
+- [x] Analyses de l'interlinéaire de Paratext reprises comme analyses validées (positions à une seule
+      analyse, sens du glossaire, mot présent dans le verset ; choix par verset pour les mots à plusieurs
+      analyses) ; Paratext seulement lu
 
 ## Points restants
 
 - Circonfixes et redoublement partiel (CV-) dans l'analyseur
-- Analyses du glossaire interlinéaire de Paratext reprises dans les textes
 - Export Webonary ; sons dans l'application Android

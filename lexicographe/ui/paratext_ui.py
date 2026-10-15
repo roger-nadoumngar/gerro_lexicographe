@@ -10,7 +10,8 @@ from .commun import CurseurAttente, erreur, info
 
 
 class DialogueParatext(QDialog):
-    """Après acceptation : projet_pt, livres, cote, avec_livres, avec_glossaire, avec_termes."""
+    """Après acceptation : projet_pt, livres, cote, avec_livres, avec_glossaire, avec_termes,
+    avec_interlineaire."""
 
     def __init__(self, projet, parent=None):
         super().__init__(parent)
@@ -66,10 +67,13 @@ class DialogueParatext(QDialog):
         self.avec_livres.setChecked(True)
         self.avec_glossaire = QCheckBox("Glossaire interlinéaire de Paratext (mots et morphèmes glosés)")
         self.avec_termes = QCheckBox("Rendus validés des termes bibliques")
+        self.avec_interlineaire = QCheckBox("Analyses de l'interlinéaire (mots glosés dans Paratext, repris comme "
+                                            "analyses validées des textes)")
         form.addRow("Ce projet est en :", self.cote)
         form.addRow(self.avec_livres)
         form.addRow(self.avec_glossaire)
         form.addRow(self.avec_termes)
+        form.addRow(self.avec_interlineaire)
         self.note_cote = QLabel("")
         self.note_cote.setObjectName("sousTitre")
         self.note_cote.setWordWrap(True)
@@ -133,7 +137,7 @@ class DialogueParatext(QDialog):
     def _maj_options(self):
         vernaculaire = self.cote.currentData() == "vernaculaire"
         # glossaire et termes décrivent la langue documentée : seulement pour un projet dans cette langue
-        for case in (self.avec_glossaire, self.avec_termes):
+        for case in (self.avec_glossaire, self.avec_termes, self.avec_interlineaire):
             case.setEnabled(vernaculaire)
             case.setChecked(vernaculaire)
         p = self.projet_pt
@@ -156,7 +160,8 @@ class DialogueParatext(QDialog):
         if not self.projet_pt:
             return
         if self.avec_livres.isChecked() and not self.livres_coches() and not (
-                self.avec_glossaire.isChecked() or self.avec_termes.isChecked()):
+                self.avec_glossaire.isChecked() or self.avec_termes.isChecked()
+                or self.avec_interlineaire.isChecked()):
             erreur(self, "Paratext", "Coche au moins un livre ou un contenu à importer.")
             return
         self.accept()
@@ -173,7 +178,10 @@ def importer_paratext(parent, projet):
         with CurseurAttente():
             if d.avec_livres.isChecked() and d.livres_coches():
                 paratext.importer_livres(projet, d.projet_pt, d.livres_coches(), d.cote.currentData(), rapport)
-            if d.avec_glossaire.isEnabled() and d.avec_glossaire.isChecked():
+            if d.avec_interlineaire.isEnabled() and d.avec_interlineaire.isChecked():
+                # importe aussi le glossaire, dont les analyses ont besoin
+                paratext.importer_interlineaire(projet, d.projet_pt, rapport)
+            elif d.avec_glossaire.isEnabled() and d.avec_glossaire.isChecked():
                 paratext.importer_glossaire(projet, d.projet_pt, rapport)
             if d.avec_termes.isEnabled() and d.avec_termes.isChecked():
                 paratext.importer_termes(projet, d.projet_pt, rapport)

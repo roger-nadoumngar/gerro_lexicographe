@@ -127,6 +127,40 @@ def test_termes_bibliques(projet, racine_pt):
     assert paratext.importer_termes(projet, sba).termes == 0
 
 
+INTERLINEAIRE = """<?xml version="1.0" encoding="utf-8"?>
+<InterlinearData GlossLanguage="fr" BookId="RUT">
+  <Verses>
+    <item><string>RUT 1:0</string><VerseData>
+      <Cluster><Range Index="0" Length="3" /><Lexeme Id="Word:ala" GlossId="d" /></Cluster></VerseData></item>
+    <item><string>RUT 1:2</string><VerseData>
+      <Cluster><Range Index="0" Length="3" /><Lexeme Id="Word:ala" GlossId="d" /></Cluster>
+      <Cluster><Range Index="4" Length="2" /><Lexeme Id="Word:ɓa" GlossId="inconnu" /></Cluster></VerseData></item>
+    <item><string>RUT 1:1</string><VerseData>
+      <Cluster><Range Index="0" Length="2" /><Lexeme Id="Word:bɔ" GlossId="a" /></Cluster>
+      <Cluster><Range Index="0" Length="2" /><Lexeme Id="Word:ala" GlossId="d" /></Cluster></VerseData></item>
+  </Verses>
+</InterlinearData>"""
+
+
+def test_analyses_de_l_interlineaire(projet, racine_pt):
+    from lexicographe import interlineaire as il
+    sba_dossier = racine_pt / "sbanb"
+    (sba_dossier / "Interlinear_fr").mkdir()
+    (sba_dossier / "Interlinear_fr" / "Interlinear_fr_RUT.xml").write_text(INTERLINEAIRE, encoding="utf-8")
+    sba = next(p for p in paratext.lister_projets(str(racine_pt)) if p.nom == "sbanb")
+    avant = _empreinte(sba_dossier / "Interlinear_fr")
+    paratext.importer_livres(projet, sba, ["RUT"], "vernaculaire")
+    r = paratext.importer_interlineaire(projet, sba)
+    assert r.analyses == 1, "« ala » de RUT 1:2 ; RUT 1:0 (titre) n'est pas un verset du corpus"
+    assert r.ambigus == 1, "deux analyses à la même position de RUT 1:1 : rien n'est repris"
+    assert r.non_relies >= 1, "sens « inconnu » absent du glossaire"
+    (analyse,) = il.analyses_de(projet.conn, "ala")
+    assert analyse.gloses == "dieu" and analyse.morphemes[0].entree_id is not None
+    assert il.Contexte(projet).statut("ala")[0] == il.VALIDEE
+    assert paratext.importer_interlineaire(projet, sba).analyses == 0, "réimporter n'ajoute rien"
+    assert _empreinte(sba_dossier / "Interlinear_fr") == avant, "Paratext n'est jamais modifié"
+
+
 @pytest.mark.skipif(not os.path.isdir(paratext.DOSSIERS_PARATEXT[0]), reason="Paratext absent")
 def test_vrais_projets_paratext_intacts(projet):
     projets = [p for p in paratext.lister_projets() if p.livres]
