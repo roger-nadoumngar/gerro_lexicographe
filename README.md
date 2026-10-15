@@ -24,6 +24,20 @@ comme langue d'analyse.
 
 ## Installation
 
+**Pour les utilisateurs (Windows)** : lancer `GerroLexicographe-Installation-<version>.exe`. Il installe le
+logiciel pour l'utilisateur (sans droits d'administrateur) ou pour tous, crée le raccourci du menu Démarrer
+(et du bureau si on le coche) et une désinstallation propre. Les projets, dans
+`%LOCALAPPDATA%\GerroLexicographe`, ne sont jamais touchés par l'installation ni la désinstallation.
+L'interface est en français ou en anglais (Fichier > Langue de l'interface) ; le guide d'utilisation
+s'ouvre par Aide > Guide d'utilisation (F1).
+
+**Construire l'installateur** (développeurs) : `python outils/construire_installateur.py` (PyInstaller,
+puis Inno Setup 6). **Traduire l'interface** : `python outils/extraire_textes.py`, traduire les nouveaux
+textes dans `outils/traductions/`, puis `python outils/construire_traductions.py` ; un test signale tout
+texte sans traduction.
+
+**Pour les développeurs (Python)** :
+
 Python 3.10 ou plus récent.
 
 ```bash

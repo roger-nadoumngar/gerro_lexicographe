@@ -28,4 +28,4 @@ Organisation du paquet :
 
 APP_NAME = "Gerro Lexicographe"
 APP_ID = "GerroLexicographe"
-__version__ = "1.3.0"
+__version__ = "1.4.0"

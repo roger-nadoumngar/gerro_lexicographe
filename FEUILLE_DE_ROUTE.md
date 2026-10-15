@@ -150,6 +150,18 @@ justifiées et jamais appliquées sans décision humaine.
       fusion sans perte (sens, exemples, photos, relations, composants, analyses), statut le plus avancé
       gardé, sauvegarde avant ; ngambay : 211 groupes, 280 entrées en trop
 
+## Version 1.4 ✅
+
+- [x] Nettoyage des données ngambay (sosies, doublons, interlinéaire Paratext) ; le glossaire Paratext
+      retrouve une entrée « radical » ou écrite avec une majuscule (plus de doublons recréés)
+- [x] Interface en anglais : textes relevés dans le code, traduction exacte / par gabarit / ligne par
+      ligne, valeurs d'origine gardées dans les listes ; test de complétude des traductions
+- [x] Guide d'utilisation en français et en anglais (Aide > Guide d'utilisation, F1)
+- [x] Essai complet sur une autre langue (kenga, Paratext KYQbible) : import, interlinéaire (66 % du
+      corpus analysé), syllabaire, clavier (saltillo ajouté), PDF, Word, site, LIFT, DAB
+- [x] Programme d'installation (Inno Setup) : utilisateur ou tous, raccourcis, icône, désinstallation
+      qui ne touche pas aux projets
+
 ## Points restants
 
 - Circonfixes et redoublement partiel (CV-) dans l'analyseur
