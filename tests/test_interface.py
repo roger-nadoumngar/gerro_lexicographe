@@ -546,6 +546,19 @@ def _domaines_test(projet):
                                          "descriptions": {}, "questions": []}])
 
 
+def test_fenetre_des_doublons(fenetre, messages):
+    from lexicographe.lexique import Entree, Sens
+    from lexicographe.ui.doublons_ui import DialogueDoublons
+    conn = fenetre.projet.conn
+    a = lexique.enregistrer_entree(conn, Entree(forme="banji", sens=[Sens(glose="lèpre")]))
+    b = lexique.enregistrer_entree(conn, Entree(forme="Banji", sens=[Sens(glose="lèpre")]))
+    d = DialogueDoublons(fenetre.projet)
+    assert d.table.rowCount() == 1 and "1 entrée(s) en trop" in d.compte.text()
+    d._fusionner_tous()
+    assert d.modifie and d.table.rowCount() == 0
+    assert (lexique.lire_entree(conn, a) is None) != (lexique.lire_entree(conn, b) is None), "une seule reste"
+
+
 def test_lettres_d_un_autre_alphabet(fenetre, messages):
     from lexicographe.lexique import Entree, Sens
     lexique.enregistrer_entree(fenetre.projet.conn, Entree(forme="dу", sens=[Sens(glose="x")]))
