@@ -330,6 +330,8 @@ class PanneauAnalyse(QWidget):
                                        else " — non vérifié, écriture libre")
                     for m in d.morphemes if m.environnement]
             texte = f"{d.segmentation}   « {d.gloses} »" + (f"   (allomorphe : {'; '.join(envs)})" if envs else "")
+            if d.approchee:
+                texte += "   (tons différents : à vérifier)"
             item = QListWidgetItem(texte)
             item.setData(Qt.UserRole, i)
             self.propositions.addItem(item)

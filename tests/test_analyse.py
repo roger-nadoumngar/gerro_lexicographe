@@ -59,6 +59,64 @@ def test_rien_n_est_devine(lexique_morpho):
     assert a.analyser("kója") == [], "aucune forme déclarée ne couvre « a »"
 
 
+def test_redoublement(lexique_morpho):
+    projet, ids = lexique_morpho
+    conn = projet.conn
+    tol = _e(conn, "tɔ̄l", "tuer", "stem")
+    a = Analyseur(conn)
+    (d,) = a.analyser("tɔ̄l-tɔ̄l")
+    assert (d.segmentation, d.gloses) == ("tɔ̄l-tɔ̄l", "tuer-RED")
+    assert [m.entree_id for m in d.morphemes] == [tol, tol] and d.morphemes[1].role == "redoublement"
+    assert a.analyser("tɔ̄ltɔ̀l")[0].segmentation == "tɔ̄l-tɔ̀l", "sans tiret, tons de la copie différents"
+    assert a.analyser("kóje-kóje")[0].gloses == "arbre-PL-RED", "la base peut avoir des affixes"
+    assert a.analyser("tɔ̄l-tɔ̄k") == [], "lettres différentes : pas de redoublement"
+    _e(conn, "to", "être", "stem")
+    assert [d.segmentation for d in Analyseur(conn).analyser("to̰to̰")] == [], \
+        "jamais de coupure entre une lettre et son accent (« to-̰to̰ »)"
+    _e(conn, "tɔ̄l-tɔ̄l", "massacrer", "stem")
+    premier = Analyseur(conn).analyser("tɔ̄l-tɔ̄l")[0]
+    assert premier.gloses == "massacrer", "le mot redoublé enregistré au lexique passe d'abord"
+    # l'interlinéaire accepte la décomposition : les morceaux redonnent le mot
+    analyse = il.depuis_decomposition("tɔ̄l-tɔ̄l", Analyseur(conn).analyser("tɔ̄l-tɔ̄l")[1])
+    assert il.reconstitue(analyse)
+
+
+def test_corpus_sans_tons(lexique_morpho):
+    projet, ids = lexique_morpho
+    conn = projet.conn
+    tol = _e(conn, "tɔ̄l", "tuer", "stem")
+    assert Analyseur(conn).analyser("koje") == [], "réglage non déclaré : les tons comptent"
+    projet.definir_reglages({"analyse_sans_tons": "1"})
+    a = Analyseur(conn)
+    (d,) = a.analyser("koje")
+    assert d.approchee and (d.segmentation, d.gloses) == ("ko-je", "arbre-PL")
+    assert il.reconstitue(il.depuis_decomposition("koje", d)), "les morceaux sont ceux du mot écrit"
+    (d,) = a.analyser("tɔ̀l")
+    assert d.approchee and d.morphemes[0].forme == "tɔ̀l" and d.morphemes[0].entree_id == tol
+    exacte = a.analyser("kóje")
+    assert len(exacte) == 1 and not exacte[0].approchee, "forme identique : une seule analyse, exacte"
+    _e(conn, "ko", "pirogue", "stem")
+    decs = Analyseur(conn).analyser("koje")
+    assert [(d.gloses, d.approchee) for d in decs] == [("pirogue-PL", False)], \
+        "une analyse exacte existe : on ne cherche pas sans les tons"
+    ctx = il.Contexte(projet)
+    assert ctx.statut("tɔl")[0] == il.AMBIGUE, "une approchée seule n'est jamais évidente"
+
+
+def test_infixe(lexique_morpho):
+    projet, _ = lexique_morpho
+    conn = projet.conn
+    _e(conn, "ktab", "écrire", "stem")
+    _e(conn, "-ar-", "PL", "infix", [Variante("-ar-", "allomorphe", environnement="/ #C _")])
+    projet.definir_reglages({"classes_phonologiques": "C = k t b"})
+    a = Analyseur(conn)
+    (d,) = a.analyser("kartab")
+    assert (d.segmentation, d.gloses) == ("k‹ar›tab", "écrire‹PL›")
+    assert il.reconstitue(il.depuis_decomposition("kartab", d))
+    assert a.analyser("ktabar") == [], "jamais en bordure du radical"
+    assert a.analyser("ktarab") == [], "environnement non respecté : pas après la première consonne"
+
+
 # -- analyses validées et interlinéaire -------------------------------------------------------
 
 def _corpus(projet, paires):

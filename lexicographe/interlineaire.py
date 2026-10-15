@@ -165,7 +165,8 @@ class Contexte:
         if validees:
             return VALIDEE, validees[0], 0
         decs = self.decompositions(forme)
-        if len(decs) == 1:
+        # une décomposition trouvée en ignorant les tons n'est jamais évidente : le linguiste choisit
+        if len(decs) == 1 and not decs[0].approchee:
             return PROPOSEE, depuis_decomposition(forme, decs[0]), 1
         return (AMBIGUE if decs else INCONNUE), None, len(decs)
 
