@@ -71,6 +71,30 @@ def trouver(conn):
     return occurrences
 
 
+MACRON = "̄"
+CHAMPS_LEXIQUE = [("entrees", "forme"), ("entrees", "forme_citation"), ("variantes", "forme"),
+                  ("exemples", "vernaculaire")]
+
+
+def sans_signe(texte, signe=MACRON):
+    """Texte sans ce signe combinant, sur toutes les lettres (ā → a, l̄ → l) ; les autres signes restent."""
+    if not texte:
+        return texte
+    return unicodedata.normalize("NFC", unicodedata.normalize("NFD", texte).replace(signe, ""))
+
+
+def retirer_signe(conn, signe=MACRON, champs=CHAMPS_LEXIQUE):
+    """Occurrences où le signe est retiré (formes, variantes, exemples ; la prononciation et le corpus ne
+    sont pas dans la liste par défaut). À appliquer avec `corriger`."""
+    occurrences = []
+    for table, colonne in champs:
+        for ligne_id, valeur in conn.execute(f"SELECT rowid, {colonne} FROM {table} WHERE {colonne} IS NOT NULL"):
+            nouveau = sans_signe(valeur, signe)
+            if nouveau != valeur:
+                occurrences.append(Occurrence(table, colonne, ligne_id, valeur, nouveau))
+    return occurrences
+
+
 def corriger(conn, occurrences=None):
     """Applique les corrections ; retourne leur nombre."""
     occurrences = trouver(conn) if occurrences is None else occurrences

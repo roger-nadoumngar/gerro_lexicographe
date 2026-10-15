@@ -10,6 +10,22 @@ def test_corriger_texte():
     assert controles.corriger_texte("ndɔ̀ɔ̄") == "ndɔ̀ɔ̄"
 
 
+def test_retirer_le_macron(projet):
+    conn = projet.conn
+    eid = lexique.enregistrer_entree(conn, Entree(forme="àl̄", prononciation="àl̄", sens=[Sens(
+        glose="monter", exemples=[Exemple(vernaculaire="Ā kàw̄ ndɔ̀ɔ̄.", traduction="Tu vas au champ.")])]))
+    with conn:
+        conn.execute("INSERT INTO phrases (ref, vernaculaire) VALUES ('GEN 1:1', 'kāw')")
+    assert controles.sans_signe("à̰ā̰ ī ō m̄") == "à̰a̰ i o m", "autres signes (grave, tilde souscrit) gardés"
+    occ = controles.retirer_signe(conn)
+    assert sorted(o.apres for o in occ) == ["A kàw ndɔ̀ɔ.", "àl"]
+    controles.corriger(conn, occ)
+    e = lexique.lire_entree(conn, eid)
+    assert (e.forme, e.prononciation) == ("àl", "àl̄"), "la prononciation n'est pas touchée"
+    assert conn.execute("SELECT vernaculaire FROM phrases").fetchone()[0] == "kāw", "le corpus n'est pas touché"
+    assert controles.retirer_signe(conn) == []
+
+
 def test_trouver_et_corriger(projet):
     conn = projet.conn
     eid = lexique.enregistrer_entree(conn, Entree(forme="à̰ӯ", sens=[Sens(
