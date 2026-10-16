@@ -26,7 +26,7 @@ dūú
 Id petit. Ngōn gɨ́ dūú un petit enfant
 òō
 VT voir. m-ō, ō, òō - je vois, tu vois, il voit
-Web Design by A. Concepteur, May 2017
+Web Design by A. Concepteur, contact@exemple.org
 """.splitlines()
 
 
@@ -92,17 +92,17 @@ def test_fusion(projet):
     conn = projet.conn
     lecture = d.lire(LIVRE)
 
-    simulation = d.fusionner(projet, lecture, "dictionnaire d'exemple", simulation=True)
+    simulation = d.fusionner(projet, lecture, "Dictionnaire d'exemple", simulation=True)
     assert simulation.simulation and simulation.entrees_creees > 0
     assert lexique.lire_entree(conn, ids["bàń"]).forme == "bàń [bà̰ń]", "la simulation ne touche pas au projet"
 
-    rapport = d.fusionner(projet, lecture, "dictionnaire d'exemple")
+    rapport = d.fusionner(projet, lecture, "Dictionnaire d'exemple")
     assert (rapport.entrees_creees, rapport.entrees_completees) == (simulation.entrees_creees,
                                                                      simulation.entrees_completees)
     ban = lexique.lire_entree(conn, ids["bàń"])
     assert (ban.forme, ban.prononciation) == ("bàń", "bà̰ń")
     assert [s.glose for s in ban.sens] == ["comment?", "pourquoi?"], "sens manquant ajouté, rien en double"
-    assert ban.sens[0].exemples[0].reference == "dictionnaire d'exemple"
+    assert ban.sens[0].exemples[0].reference == "Dictionnaire d'exemple"
     baw = lexique.lire_entree(conn, ids["bàw̄"])
     assert (baw.forme, baw.sens[0].glose) == ("bàw̄", "père (v. bɔ̀ɔ̄)")
     assert "Dialecte : Mang" in baw.notes
@@ -116,13 +116,13 @@ def test_fusion(projet):
     assert any(r[1] == "synonyme" for r in conn.execute(
         "SELECT source_id, type FROM relations WHERE source_id=? OR cible_id=?", (bere[0], bere[0])))
     ecole = lexique.lire_entree(conn, lexique.chercher_par_forme(conn, "làkɔ́l̀")[0])
-    assert "Emprunt : français" in ecole.notes and "Source : dictionnaire d'exemple" in ecole.notes
+    assert "Emprunt : français" in ecole.notes and "Source : Dictionnaire d'exemple" in ecole.notes
     assert lexique.nom_categorie(conn, ecole.sens[0].categorie_id) == "Nom", "catégorie existante réutilisée"
     expr = lexique.lire_entree(conn, lexique.chercher_par_forme(conn, "àw̄ kédé")[0])
     assert expr.type_forme_complexe == "expression idiomatique"
     assert expr.composants == lexique.chercher_par_forme(conn, "kédé")[:1]
 
-    again = d.fusionner(projet, lecture, "dictionnaire d'exemple")
+    again = d.fusionner(projet, lecture, "Dictionnaire d'exemple")
     assert (again.entrees_creees, again.entrees_completees, again.exemples, again.relations,
             again.expressions_creees) == (0, 0, 0, 0, 0), "réimporter ne change rien"
 
