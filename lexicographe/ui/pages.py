@@ -451,9 +451,12 @@ class PageLexique(Page):
         importer.setMenu(menu_import)
         doublons_btn = QPushButton("Doublons…")
         doublons_btn.clicked.connect(self._doublons)
+        signe_btn = QPushButton("Retirer un signe…")
+        signe_btn.clicked.connect(self._retirer_signe)
         bas.addWidget(nouvelle)
         bas.addWidget(self.btn_masse)
         bas.addWidget(doublons_btn)
+        bas.addWidget(signe_btn)
         bas.addWidget(importer)
         bas.addStretch()
         gl.addLayout(bas)
@@ -543,6 +546,15 @@ class PageLexique(Page):
         self.liste.clearSelection()
         self.editeur.charger_entree(Entree(sens=[Sens()]))
         self.editeur.forme.setFocus()
+
+    def _retirer_signe(self):
+        from .nettoyage_ui import DialogueRetirerSigne
+        if not self.peut_quitter():
+            return
+        d = DialogueRetirerSigne(self.projet, self)
+        d.exec()
+        if d.modifie:
+            self.donnees_modifiees.emit()
 
     def _doublons(self):
         from .doublons_ui import DialogueDoublons

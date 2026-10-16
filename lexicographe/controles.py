@@ -83,6 +83,27 @@ def sans_signe(texte, signe=MACRON):
     return unicodedata.normalize("NFC", unicodedata.normalize("NFD", texte).replace(signe, ""))
 
 
+# groupes de champs proposés pour retirer un signe
+ZONES = {
+    "mots": [("entrees", "forme"), ("entrees", "forme_citation"), ("variantes", "forme")],
+    "exemples": [("exemples", "vernaculaire")],
+    "prononciations": [("entrees", "prononciation")],
+    "textes": [("sens", "glose"), ("sens", "definition"), ("sens", "inverse"), ("exemples", "traduction"),
+               ("entrees", "notes")],
+    "corpus": [("phrases", "vernaculaire")],
+}
+
+
+def signes_presents(conn, champs=None):
+    """{signe combinant: nombre} dans ces champs (par défaut : mots, exemples, prononciations)."""
+    from collections import Counter
+    compte = Counter()
+    for table, colonne in champs or ZONES["mots"] + ZONES["exemples"] + ZONES["prononciations"]:
+        for (valeur,) in conn.execute(f"SELECT {colonne} FROM {table} WHERE {colonne} IS NOT NULL"):
+            compte.update(c for c in unicodedata.normalize("NFD", valeur) if unicodedata.combining(c))
+    return compte
+
+
 def retirer_signe(conn, signe=MACRON, champs=CHAMPS_LEXIQUE):
     """Occurrences où le signe est retiré (formes, variantes, exemples ; la prononciation et le corpus ne
     sont pas dans la liste par défaut). À appliquer avec `corriger`."""

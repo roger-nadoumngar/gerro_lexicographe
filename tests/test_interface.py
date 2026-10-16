@@ -546,6 +546,22 @@ def _domaines_test(projet):
                                          "descriptions": {}, "questions": []}])
 
 
+def test_retirer_un_signe(fenetre, messages):
+    from lexicographe.lexique import Entree, Exemple, Sens
+    from lexicographe.ui.nettoyage_ui import DialogueRetirerSigne
+    conn = fenetre.projet.conn
+    eid = lexique.enregistrer_entree(conn, Entree(forme="ùdū", prononciation="ùdū", sens=[Sens(
+        glose="sortir", exemples=[Exemple("Ā ùdū.", "Tu sors.")])]))
+    d = DialogueRetirerSigne(fenetre.projet)
+    d.signe.setCurrentIndex(d.signe.findData("̄"))
+    assert "2 texte(s)" in d.resume.text(), "mots et exemples cochés ; prononciations non"
+    d.zones["prononciations"].setChecked(True)
+    assert "3 texte(s)" in d.resume.text()
+    d._appliquer()
+    e = lexique.lire_entree(conn, eid)
+    assert d.modifie and (e.forme, e.prononciation, e.sens[0].exemples[0].vernaculaire) == ("ùdu", "ùdu", "A ùdu.")
+
+
 def test_fenetre_des_doublons(fenetre, messages):
     from lexicographe.lexique import Entree, Sens
     from lexicographe.ui.doublons_ui import DialogueDoublons

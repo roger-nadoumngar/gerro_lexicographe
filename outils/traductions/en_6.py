@@ -1,0 +1,16 @@
+T = {
+    "\n\n{} groupe(s) de mots sont devenus identiques avec une glose commune : Lexique > Doublons… permet de les fusionner.": "\n\n{} group(s) of words have become identical with a common gloss: Lexicon > Duplicates… lets you merge them.",
+    "Corriger {} texte(s) ? Le projet est sauvegardé avant.": "Correct {} text(s)? The project is backed up first.",
+    "Mots et variantes": "Words and variants",
+    "Où :": "Where:",
+    "Phrases d'exemple": "Example sentences",
+    "Phrases du corpus (versets, textes)": "Corpus sentences (verses, texts)",
+    "Prononciations": "Pronunciations",
+    "Retire un signe (ton, accent…) sur toutes les lettres, par exemple quand l'orthographe n'écrit plus le ton moyen : ā → a, l̄ → l. Les autres signes restent. Le projet est sauvegardé avant.": "Removes a mark (tone, accent…) from all letters, for example when the orthography no longer writes mid tone: ā → a, l̄ → l. Other marks stay. The project is backed up first.",
+    "Retirer un signe": "Remove a mark",
+    "Retirer un signe…": "Remove a mark…",
+    "Signe :": "Mark:",
+    "Textes en langue d'analyse qui citent des mots (gloses, définitions, traductions, notes)": "Analysis-language texts that quote words (glosses, definitions, translations, notes)",
+    "{} texte(s) à corriger.": "{} text(s) to correct.",
+    "— choisir un signe —": "— choose a mark —",
+}
