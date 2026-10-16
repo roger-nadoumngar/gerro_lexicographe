@@ -24,7 +24,7 @@ def test_fusion_sans_perte(projet):
     conn = projet.conn
     cat = lexique.ajouter_categorie(conn, "Nom", "n")
     garder = _e(conn, "bísī", Sens(glose="chien", exemples=[Exemple("Bísī lé àw̄.", "Le chien part.")]),
-                statut="à vérifier", notes="Source : Keegan")
+                statut="à vérifier", notes="Source : dictionnaire d'exemple")
     retirer = _e(conn, "Bísī", Sens(glose="chien domestique", categorie_id=cat, definition="animal",
                                      exemples=[Exemple("Bísī lé àw̄.", "doublon"), Exemple("Bísī ndɔ̄.", "Le chien mord.")]),
                  Sens(glose="ami fidèle"), statut="validé", prononciation="bísī", notes="Glossaire Paratext",
@@ -46,7 +46,7 @@ def test_fusion_sans_perte(projet):
     assert [x.vernaculaire for x in chien.exemples] == ["Bísī lé àw̄.", "Bísī ndɔ̄."], "exemple identique pas dupliqué"
     assert chien.categorie_id == cat and chien.definition == "animal"
     assert (e.statut, e.prononciation) == ("validé", "bísī"), "statut le plus avancé, prononciation reprise"
-    assert e.notes.splitlines() == ["Source : Keegan", "Glossaire Paratext"]
+    assert e.notes.splitlines() == ["Source : dictionnaire d'exemple", "Glossaire Paratext"]
     assert [v.forme for v in e.variantes] == ["bísɨ̄"]
     assert lexique.medias_de(conn, garder)
     assert conn.execute("SELECT source_id, cible_id, type FROM relations").fetchall() == [(autre, garder, "voir aussi")]

@@ -412,7 +412,7 @@ def test_import_dictionnaire_imprime(fenetre, tmp_path, monkeypatch, messages):
     chemin = tmp_path / "dico.txt"
     chemin.write_text("\n".join(LIVRE), encoding="utf-8")
     monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **k: (str(chemin), ""))
-    monkeypatch.setattr(QInputDialog, "getText", lambda *a, **k: ("Keegan 2015", True))
+    monkeypatch.setattr(QInputDialog, "getText", lambda *a, **k: ("Dictionnaire d'exemple", True))
     fenetre._importer_dictionnaire()
     assert not [m for m in messages if m[0] == "erreur"]
     assert any(m[0] == "info" and "9 entrée(s) créée(s)" in m[2] and "Sauvegarde" in m[2] for m in messages)

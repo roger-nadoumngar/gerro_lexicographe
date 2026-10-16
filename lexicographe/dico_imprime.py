@@ -1,5 +1,5 @@
 """Lecture d'un dictionnaire imprimé, présenté comme ceux du Projet des langues
-Sara-Baguirmiennes (Keegan et al., Morkeg Books) puis converti en Word ou en texte :
+Sara-Baguirmiennes, puis converti en Word ou en texte :
 
     bèngè [bḛ̀ŋgè] (Syn: kàgɨ̀)            ← vedette, prononciation, synonymes, dialecte, langue d'origine
     N panthère. Bàw̄ dèné jē ... Le père de la fille ...VT laisser. ...   ← sens : étiquette, glose, exemples
@@ -234,6 +234,8 @@ def lire(chemin_ou_lignes):
 
 def _ressemble_a_une_vedette(ligne):
     sans_parentheses = re.sub(r"\[[^\]]*\]|\([^)]*\)", "", ligne)
+    if re.search(r"@|https?:|www\.", ligne):   # adresse e-mail ou web (crédits, pied de page) : pas un mot
+        return False
     return len(sans_parentheses) <= 50 and not re.search(r"[.!?]\s", sans_parentheses + " ") \
         and len(sans_parentheses.split()) <= 4
 
