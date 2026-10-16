@@ -162,10 +162,12 @@ justifiées et jamais appliquées sans décision humaine.
 - [x] Programme d'installation (Inno Setup) : utilisateur ou tous, raccourcis, icône, désinstallation
       qui ne touche pas aux projets
 
-## Version 1.5 (en cours)
+## Version 1.5 ✅
 
 - [x] Analyseur : circonfixes déclarés (« ka- -ŋ » entourant un radical déclaré) et redoublement partiel
       (copie consonne(s) + voyelle(s) du début du radical, seulement si la classe V est déclarée)
+- [x] Lexique > Retirer un signe… : retirer un ton ou un accent sur toutes les lettres, zones au choix
+      (mots, exemples, prononciations, textes, corpus), aperçu, sauvegarde ; ngambay : ton moyen retiré
 
 ## Points restants
 
