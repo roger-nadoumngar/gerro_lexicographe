@@ -151,6 +151,17 @@ def test_alignement_et_preuves(projet):
     assert [r for r, _, _ in alignement.preuves(projet, "kó", "arbre")] == ["T 1:1", "T 1:2"]
 
 
+def test_file_validation_par_texte(projet):
+    _corpus(projet, [("kó ndɔ", "arbre jour"), ("kó", "arbre")])
+    with projet.conn:
+        projet.conn.executemany("INSERT INTO phrases (ref, vernaculaire, analyse, source) VALUES (?,?,?,?)",
+                                [("T001 1", "ala kó", "Dieu arbre", "texte T001")])
+    alignement.recalculer(projet)
+    assert {f for f, *_ in alignement.file_validation(projet, texte="T001")} == {"ala", "kó"}
+    assert len(alignement.file_validation(projet)) == 3
+    assert alignement.preuves(projet, "kó", "arbre", texte="T001")[0][0] == "T001 1"
+
+
 def test_validation_et_contradiction(projet):
     _corpus(projet, [("kó", "arbre"), ("kó ndɔ", "arbre jour")])
     alignement.recalculer(projet)

@@ -9,4 +9,5 @@ T = {
     "{}  ({} entrée(s), {} exemple(s))": "{}  ({} entry(ies), {} example(s))",
     "{} exemple(s) retiré(s) ; {} entrée(s) supprimée(s){} ; {} entrée(s) gardée(s) car elles ont une autre origine{}.": "{} example(s) removed; {} entry(ies) deleted{}; {} entry(ies) kept because they have another origin{}.",
     "— choisir une source —": "— choose a source —",
+    "Tous les textes": "All texts",
 }

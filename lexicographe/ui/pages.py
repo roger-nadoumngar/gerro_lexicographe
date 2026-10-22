@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QFileDia
                                QPlainTextEdit, QPushButton, QSplitter, QTableWidget, QTableWidgetItem,
                                QTextBrowser, QVBoxLayout, QWidget, QDialog, QDialogButtonBox)
 
-from .. import alignement, domaines, exports, lexique, lift_import, usfm
+from .. import alignement, domaines, exports, lexique, lift_import, textes, usfm
 from ..lexique import Entree, Exemple, Sens
 from ..projet import copier_medias
 from .commun import CurseurAttente, carte, confirmer, erreur, info, surligner, titre
@@ -250,9 +250,17 @@ class PageValidation(Page):
         col.addWidget(self.forme)
         col.addWidget(self.meta)
         tete.addLayout(col, 1)
+        droite = QVBoxLayout()
+        ligne_texte = QHBoxLayout()
+        ligne_texte.addWidget(QLabel("Texte :"))
+        self.choix_texte = QComboBox()
+        self.choix_texte.currentIndexChanged.connect(self._changer_texte)
+        ligne_texte.addWidget(self.choix_texte)
+        droite.addLayout(ligne_texte)
         self.reste = QLabel("")
         self.reste.setObjectName("sousTitre")
-        tete.addWidget(self.reste, 0, Qt.AlignTop)
+        droite.addWidget(self.reste, 0, Qt.AlignRight)
+        tete.addLayout(droite)
         self.racine.addLayout(tete)
 
         self.candidats = QHBoxLayout()
@@ -286,11 +294,29 @@ class PageValidation(Page):
         boutons.addStretch()
         self.racine.addLayout(boutons)
 
-    def rafraichir(self):
-        file = alignement.file_validation(self.projet, self.passes)
+    def _remplir_textes(self):
+        courant = self.choix_texte.currentData()
+        self.choix_texte.blockSignals(True)
+        self.choix_texte.clear()
+        self.choix_texte.addItem("Tous les textes", None)
+        for t in textes.lister(self.projet.conn):
+            self.choix_texte.addItem(f"{t.titre} ({t.code})" if t.titre != t.code else t.code, t.code)
+        i = self.choix_texte.findData(courant)
+        self.choix_texte.setCurrentIndex(max(i, 0))
+        self.choix_texte.blockSignals(False)
+
+    def _changer_texte(self):
+        self.passes.clear()
+        self.rafraichir(remplir=False)
+
+    def rafraichir(self, remplir=True):
+        if remplir:
+            self._remplir_textes()
+        texte = self.choix_texte.currentData()
+        file = alignement.file_validation(self.projet, self.passes, texte)
         if not file and self.passes:
             self.passes.clear()  # tous les mots restants ont été passés : nouveau tour
-            file = alignement.file_validation(self.projet)
+            file = alignement.file_validation(self.projet, texte=texte)
         self.reste.setText(f"{len(file)} proposition(s) à examiner")
         for i in reversed(range(self.candidats.count())):
             w = self.candidats.itemAt(i).widget()
@@ -322,7 +348,7 @@ class PageValidation(Page):
         self.candidats.addStretch()
         self._afficher_preuves(candidat)
 
-        exemples = alignement.preuves(self.projet, forme, candidat, limite=1)
+        exemples = alignement.preuves(self.projet, forme, candidat, limite=1, texte=texte)
         sens = Sens(glose=candidat or "")
         if exemples:
             ref, vern, analyse = exemples[0]
@@ -331,7 +357,8 @@ class PageValidation(Page):
         self.editeur.charger_entree(Entree(forme=forme, statut="validé", sens=[sens]))
 
     def _afficher_preuves(self, candidat):
-        lignes = alignement.preuves(self.projet, self.forme_courante, candidat)
+        lignes = alignement.preuves(self.projet, self.forme_courante, candidat,
+                                    texte=self.choix_texte.currentData())
         tv, ta = self.projet.tokeniseur_vern, self.projet.tokeniseur_analyse
         morceaux = [f"<p><i>{len(lignes)} phrase(s) contiennent les deux mots"
                     f"{' (50 premières)' if len(lignes) >= 50 else ''}.</i></p>"]

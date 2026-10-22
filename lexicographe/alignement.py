@@ -105,12 +105,20 @@ def _mots_des_gloses(projet, forme):
     return mots
 
 
-def preuves(projet, forme, candidat, limite=50):
+def _du_texte(ref, code):
+    return ref == code or ref.startswith(code + " ")
+
+
+def preuves(projet, forme, candidat, limite=50, texte=None):
     """Phrases où la forme et le candidat apparaissent ensemble : la justification
-    de la proposition. [(ref, vernaculaire, analyse)]"""
+    de la proposition. [(ref, vernaculaire, analyse)]
+    Avec `texte` (code d'un texte), les phrases de ce texte viennent en premier."""
     tok_v, tok_a = projet.tokeniseur_vern, projet.tokeniseur_analyse
+    paires = _paires(projet)
+    if texte:
+        paires = sorted(paires, key=lambda p: not _du_texte(p[0], texte))
     resultat = []
-    for ref, vern, analyse in _paires(projet):
+    for ref, vern, analyse in paires:
         if forme in tok_v.mots(vern) and (not candidat or candidat in tok_a.mots(analyse)):
             resultat.append((ref, vern, analyse))
             if len(resultat) >= limite:
@@ -118,12 +126,24 @@ def preuves(projet, forme, candidat, limite=50):
     return resultat
 
 
-def file_validation(projet, exclues=()):
-    """Hypothèses en attente, les plus sûres d'abord."""
+def mots_du_texte(projet, code):
+    """Mots vernaculaires des phrases d'un texte du corpus."""
+    tok = projet.tokeniseur_vern
+    mots = set()
+    for (vern,) in projet.conn.execute("SELECT vernaculaire FROM phrases WHERE ref = ? OR ref LIKE ?",
+                                       (code, code + " %")):
+        mots.update(tok.mots(vern or ""))
+    return mots
+
+
+def file_validation(projet, exclues=(), texte=None):
+    """Hypothèses en attente, les plus sûres d'abord. Avec `texte` (code d'un texte),
+    seulement les mots qui apparaissent dans ce texte."""
     lignes = projet.conn.execute("""SELECT forme, frequence, candidat, score, cooccurrences, autres_candidats
                                     FROM hypotheses WHERE statut='en_attente'
                                     ORDER BY score DESC, frequence DESC, forme""").fetchall()
-    return [l for l in lignes if l[0] not in exclues]
+    garder = mots_du_texte(projet, texte) if texte else None
+    return [l for l in lignes if l[0] not in exclues and (garder is None or l[0] in garder)]
 
 
 def valider(projet, forme, entree):
