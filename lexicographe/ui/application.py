@@ -122,6 +122,8 @@ def main():
     traduction.charger(traduction.langue_enregistree())
     traduction.installer(app)
     reglages = QSettings(APP_ID, APP_ID)
+    from .inscription_ui import proposer_au_demarrage
+    proposer_au_demarrage()
 
     premier = True
     while True:

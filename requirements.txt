@@ -1,4 +1,6 @@
 PySide6>=6.7
+# inscription (vérification des codes, sans internet)
+cryptography
 # facultatifs : lecture de documents Word et PDF dans la page Corpus
 python-docx
 pypdf

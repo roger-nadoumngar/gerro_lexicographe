@@ -141,13 +141,32 @@ class FenetrePrincipale(QMainWindow):
         guide.setShortcut(QKeySequence.HelpContents)
         guide.triggered.connect(self._guide)
         aide.addAction(guide)
-        a = QAction("À propos", self)
-        a.triggered.connect(lambda: QMessageBox.about(
-            self, APP_NAME, f"<b>{APP_NAME}</b> {__version__}<br>Lexicographie et documentation des langues.<br>"
-                            f"Projet : {self.projet.chemin}<br><br>"
-                            "Domaines sémantiques : SIL Global, <a href='https://semdom.org'>semdom.org</a>, "
-                            "licence <a href='https://creativecommons.org/licenses/by-sa/4.0/deed.fr'>CC BY-SA 4.0</a>."))
+        a = QAction("Inscription…", self)
+        a.triggered.connect(self._inscription)
         aide.addAction(a)
+        a = QAction("À propos", self)
+        a.triggered.connect(self._a_propos)
+        aide.addAction(a)
+
+    def _inscription(self):
+        from .. import inscription
+        from .inscription_ui import DialogueInscription
+        email = inscription.inscrit()
+        if email:
+            info(self, "Inscription", f"{APP_NAME} est inscrit au nom de {email}.")
+        else:
+            DialogueInscription(self).exec()
+
+    def _a_propos(self):
+        from .. import inscription
+        from .traduction import tr
+        email = inscription.inscrit()
+        statut = tr(f"Inscrit au nom de : {email}") if email else tr("Non inscrit (menu Aide → Inscription…)")
+        QMessageBox.about(
+            self, APP_NAME, f"<b>{APP_NAME}</b> {__version__}<br>Lexicographie et documentation des langues.<br>"
+                            f"Projet : {self.projet.chemin}<br>{statut}<br><br>"
+                            "Domaines sémantiques : SIL Global, <a href='https://semdom.org'>semdom.org</a>, "
+                            "licence <a href='https://creativecommons.org/licenses/by-sa/4.0/deed.fr'>CC BY-SA 4.0</a>.")
 
     def _guide(self):
         from ..chemins import ressource
