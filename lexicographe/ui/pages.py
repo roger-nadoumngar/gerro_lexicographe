@@ -449,14 +449,15 @@ class PageLexique(Page):
         menu_import.addAction("Depuis un projet FLEx…", self._importer_flex)
         menu_import.addAction("Depuis un fichier LIFT (FLEx, WeSay)…", self._importer_lift)
         importer.setMenu(menu_import)
-        doublons_btn = QPushButton("Doublons…")
-        doublons_btn.clicked.connect(self._doublons)
-        signe_btn = QPushButton("Retirer un signe…")
-        signe_btn.clicked.connect(self._retirer_signe)
+        nettoyer = QPushButton("Nettoyer ▾")
+        menu_nettoyer = QMenu(nettoyer)
+        menu_nettoyer.addAction("Doublons…", self._doublons)
+        menu_nettoyer.addAction("Retirer un signe…", self._retirer_signe)
+        menu_nettoyer.addAction("Retirer une source…", self._retirer_source)
+        nettoyer.setMenu(menu_nettoyer)
         bas.addWidget(nouvelle)
         bas.addWidget(self.btn_masse)
-        bas.addWidget(doublons_btn)
-        bas.addWidget(signe_btn)
+        bas.addWidget(nettoyer)
         bas.addWidget(importer)
         bas.addStretch()
         gl.addLayout(bas)
@@ -546,6 +547,15 @@ class PageLexique(Page):
         self.liste.clearSelection()
         self.editeur.charger_entree(Entree(sens=[Sens()]))
         self.editeur.forme.setFocus()
+
+    def _retirer_source(self):
+        from .sources_ui import DialogueRetirerSource
+        if not self.peut_quitter():
+            return
+        d = DialogueRetirerSource(self.projet, self)
+        d.exec()
+        if d.modifie:
+            self.donnees_modifiees.emit()
 
     def _retirer_signe(self):
         from .nettoyage_ui import DialogueRetirerSigne

@@ -169,6 +169,13 @@ justifiées et jamais appliquées sans décision humaine.
 - [x] Lexique > Retirer un signe… : retirer un ton ou un accent sur toutes les lettres, zones au choix
       (mots, exemples, prononciations, textes, corpus), aperçu, sauvegarde ; ngambay : ton moyen retiré
 
+## Version 1.6 ✅
+
+- [x] Lexique > Nettoyer ▾ (doublons, retirer un signe, retirer une source) ; « Retirer une source » : exemples
+      de la source retirés, entrées venues seulement d'elle supprimées, entrées d'autre origine (Paratext,
+      collecte, image, son, analyse) gardées ; ce qui n'est pas marqué n'est jamais touché
+- [x] Plus aucun nom d'auteur tiers dans le logiciel ; marque neutre de source ; installateur audité vierge
+
 ## Points restants
 
 - Redoublement partiel en fin de mot (copie de la dernière syllabe)
